@@ -5,6 +5,39 @@ mod selector;
 
 include!("utils.rs");
 
+
+fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Selector) -> bool {
+    let mut in_sequence = false;
+    if selector.stopped {
+        return in_sequence
+    }
+    if (item_idx == selector.start_idx && utils::regex_is_default(&selector.start_regex))
+        || selector.start_regex.is_match(item)
+    {
+        // Sequence started
+        in_sequence = true;
+        selector.start_idx = item_idx;
+        if (utils::regex_eq(&selector.end_regex, &selector.start_regex)
+            && !utils::regex_is_default(&selector.start_regex))
+            || (selector.end_idx == selector.start_idx)
+        {
+            // Only one column selected
+            selector.stopped = true;
+        }
+    } else if item_idx == selector.end_idx || selector.end_regex.is_match(item) {
+        // Sequence end
+        in_sequence = true;
+        selector.end_idx = item_idx;
+    } else if item_idx > selector.start_idx && item_idx < selector.end_idx
+        && (item_idx - selector.start_idx) % selector.step == 0
+    {
+        // Sequence middle
+        in_sequence = true;
+    } 
+    in_sequence
+}
+
+
 /// Get vector of columns to use from header row
 fn get_columns(
     index_row: &String,
@@ -20,48 +53,9 @@ fn get_columns(
         // Iterate through columns in first row
         for (col_idx, column) in utils::split(index_row, column_delimiter).iter().enumerate() {
             // Iterate through selector in vector of selectors
-            for column_selector in &mut *column_selectors {
-                if column_selector.stopped {
-                    // Continue to next selector if a current selector's whole range has already
-                    // been captured
-                    continue;
-                }
-                // Keep track of whether column is contained by one selector's sequence to avoid
-                // re-checking a column if already captured
-                let mut in_sequence: bool = false;
-                if (col_idx == column_selector.start_idx
-                    && utils::regex_is_default(&column_selector.start_regex))
-                    || column_selector.start_regex.is_match(column)
-                {
-                    // Sequence started
+            for column_selector in column_selectors.iter_mut() {
+                if item_in_sequence(col_idx, column, column_selector) {
                     export_column_idxs.push(col_idx);
-                    column_selector.start_idx = col_idx;
-                    in_sequence = true;
-                    if (utils::regex_eq(&column_selector.end_regex, &column_selector.start_regex)
-                        && utils::regex_is_default(&column_selector.start_regex))
-                        || (column_selector.end_idx == column_selector.start_idx)
-                    {
-                        // Only one column selected
-                        column_selector.stopped = true;
-                    }
-                } else if col_idx == column_selector.end_idx
-                    || column_selector.end_regex.is_match(column)
-                {
-                    // Sequence end
-                    export_column_idxs.push(col_idx);
-                    column_selector.end_idx = col_idx;
-                    in_sequence = true;
-                } else if col_idx > column_selector.start_idx
-                    && col_idx < column_selector.end_idx
-                    && (col_idx - column_selector.start_idx) % column_selector.step == 0
-                {
-                    // Sequence middle
-                    export_column_idxs.push(col_idx);
-                    in_sequence = true;
-                }
-                // No need to check if row in other selectors once we add to export
-                if in_sequence {
-                    break;
                 }
             }
         }
@@ -104,46 +98,9 @@ fn main() {
         if row_idx == 0 {
             export_cols = get_columns(row, &mut column_selectors, &args.column_delimiter);
         }
-        for row_selector in &mut row_selectors {
-            if row_selector.stopped {
-                // Continue to next selector if a current selector's whole range has already
-                // been captured
-                continue;
-            }
-            // Keep track of whether column is contained by one selector's sequence to avoid
-            // re-checking a column if already captured
-            let mut in_sequence: bool = false;
-            if (row_idx == row_selector.start_idx
-                && utils::regex_is_default(&row_selector.start_regex))
-                || row_selector.start_regex.is_match(row)
-            {
-                // Sequence start
-                output.push(get_cells(&row, &export_cols, &args.column_delimiter));
-                row_selector.start_idx = row_idx;
-                in_sequence = true;
-                if (utils::regex_eq(&row_selector.start_regex, &row_selector.end_regex)
-                    && utils::regex_is_default(&row_selector.start_regex))
-                    || (row_selector.end_idx == row_selector.start_idx)
-                {
-                    // Only one column selected
-                    row_selector.stopped = true;
-                }
-            } else if row_idx == row_selector.end_idx || row_selector.end_regex.is_match(row) {
-                // Sequence end
-                output.push(get_cells(&row, &export_cols, &args.column_delimiter));
-                row_selector.end_idx = row_idx;
-                in_sequence = true;
-            } else if row_idx > row_selector.start_idx
-                && row_idx < row_selector.end_idx
-                && (row_idx - row_selector.start_idx) % row_selector.step == 0
-            {
-                // Sequence middle
-                output.push(get_cells(&row, &export_cols, &args.column_delimiter));
-                in_sequence = true;
-            }
-            // No need to check if row in other selectors once we add to export
-            if in_sequence {
-                break;
+        for row_selector in row_selectors.iter_mut() {
+            if item_in_sequence(row_idx, row, row_selector) {
+                output.push(get_cells(row, &export_cols, &args.column_delimiter));
             }
         }
     }
