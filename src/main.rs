@@ -1,27 +1,9 @@
 use clap::Parser;
-use regex::Regex;
 
 mod cli;
 mod selector;
 
-/// Split given text by a delimiter, returning a vector of Strings
-fn split(text: &String, delimiter: &String) -> Vec<String> {
-    if delimiter.is_empty() {
-        // Split by lines if empty delmiter passed. This should be faster than regex split
-        text.lines()
-            .filter(|&s| s.is_empty() == false)
-            .map(String::from)
-            .collect()
-    } else {
-        // Split by regex
-        Regex::new(delimiter)
-            .unwrap()
-            .split(text)
-            .filter(|&s| s.is_empty() == false)
-            .map(String::from)
-            .collect()
-    }
-}
+include!("utils.rs");
 
 /// Get vector of columns to use from header row
 fn get_columns(
@@ -36,7 +18,7 @@ fn get_columns(
         // Return a vector of column indices to export
         let mut export_column_idxs: Vec<usize> = Vec::new();
         // Iterate through columns in first row
-        for (col_idx, column) in split(index_row, column_delimiter).iter().enumerate() {
+        for (col_idx, column) in utils::split(index_row, column_delimiter).iter().enumerate() {
             // Iterate through selector in vector of selectors
             for column_selector in &mut *column_selectors {
                 if column_selector.stopped {
@@ -48,15 +30,15 @@ fn get_columns(
                 // re-checking a column if already captured
                 let mut in_sequence: bool = false;
                 if (col_idx == column_selector.start_idx
-                    && (column_selector.start_regex.as_str() == ".^"))
+                    && utils::regex_is_default(&column_selector.start_regex))
                     || column_selector.start_regex.is_match(column)
                 {
                     // Sequence started
                     export_column_idxs.push(col_idx);
                     column_selector.start_idx = col_idx;
                     in_sequence = true;
-                    if (column_selector.end_regex.as_str() == column_selector.start_regex.as_str()
-                        && (column_selector.start_regex.as_str() != ".^"))
+                    if (utils::regex_eq(&column_selector.end_regex, &column_selector.start_regex)
+                        && utils::regex_is_default(&column_selector.start_regex))
                         || (column_selector.end_idx == column_selector.start_idx)
                     {
                         // Only one column selected
@@ -96,7 +78,7 @@ fn get_cells(row: &String, cells_to_select: &Vec<usize>, column_delimiter: &Stri
     } else {
         // Iterate through cells in row and push ones with matching indeces to output vector
         let mut output: Vec<String> = Vec::new();
-        for (cell_idx, cell) in split(row, column_delimiter).iter().enumerate() {
+        for (cell_idx, cell) in utils::split(row, column_delimiter).iter().enumerate() {
             if cells_to_select.contains(&cell_idx) {
                 output.push((*cell).clone());
             }
@@ -117,7 +99,7 @@ fn main() {
     // Parse input data according to arguments
     let mut export_cols: Vec<usize> = Vec::new();
     let mut output: Vec<Vec<String>> = Vec::new();
-    let split_rows = split(&input, &args.row_delimiter);
+    let split_rows = utils::split(&input, &args.row_delimiter);
     for (row_idx, row) in split_rows.iter().enumerate() {
         if row_idx == 0 {
             export_cols = get_columns(row, &mut column_selectors, &args.column_delimiter);
@@ -131,15 +113,16 @@ fn main() {
             // Keep track of whether column is contained by one selector's sequence to avoid
             // re-checking a column if already captured
             let mut in_sequence: bool = false;
-            if (row_idx == row_selector.start_idx && (row_selector.start_regex.as_str() == ".^"))
+            if (row_idx == row_selector.start_idx
+                && utils::regex_is_default(&row_selector.start_regex))
                 || row_selector.start_regex.is_match(row)
             {
                 // Sequence start
                 output.push(get_cells(&row, &export_cols, &args.column_delimiter));
                 row_selector.start_idx = row_idx;
                 in_sequence = true;
-                if (row_selector.end_regex.as_str() == row_selector.start_regex.as_str()
-                    && (row_selector.start_regex.as_str() != ".^"))
+                if (utils::regex_eq(&row_selector.start_regex, &row_selector.end_regex)
+                    && utils::regex_is_default(&row_selector.start_regex))
                     || (row_selector.end_idx == row_selector.start_idx)
                 {
                     // Only one column selected

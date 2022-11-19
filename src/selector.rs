@@ -1,4 +1,5 @@
 use regex::Regex;
+include!("utils.rs");
 
 /// Keep track of user column and row selections
 #[derive(Debug)]
@@ -54,9 +55,9 @@ impl PartialEq for Selector {
     /// PartialEq implemented by default.
     fn eq(&self, other: &Self) -> bool {
         self.start_idx == other.start_idx
-            && self.start_regex.as_str() == other.start_regex.as_str()
+            && utils::regex_eq(&self.start_regex, &other.start_regex)
             && self.end_idx == other.end_idx
-            && self.end_regex.as_str() == other.end_regex.as_str()
+            && utils::regex_eq(&self.end_regex, &other.end_regex)
             && self.step == other.step
             && self.stopped == other.stopped
     }
