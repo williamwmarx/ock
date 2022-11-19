@@ -1,37 +1,8 @@
 use clap::Parser;
 use regex::Regex;
-use std::fs;
-use std::io::{self, BufRead};
-use std::path::Path;
 
+mod cli;
 mod selector;
-
-/// CLI arguments parsed here
-/// All parsing handled by the `clap` crate
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Rows to select from input
-    #[arg(short, long, allow_negative_numbers = true, required = false)]
-    rows: String,
-
-    /// Row delimiter
-    #[arg(long, default_value = r"\n")]
-    row_delimiter: String,
-
-    /// Columns to select from input
-    #[arg(short, long, allow_negative_numbers = true, required = false)]
-    columns: String,
-
-    /// Column delimiter
-    #[arg(long, default_value = r"\s")]
-    column_delimiter: String,
-
-    /// Text to parse
-    #[arg(value_delimiter = None, default_value = "", help="Text to parse")]
-    input: String,
-}
-
 
 /// Split given text by a delimiter, returning a vector of Strings
 fn split(text: &String, delimiter: &String) -> Vec<String> {
@@ -118,10 +89,7 @@ fn get_columns(
 }
 
 /// Grab cells in a row by a list of given indeces
-fn get_cells(row: &String,
-             cells_to_select: &Vec<usize>,
-             column_delimiter: &String
-) -> Vec<String> {
+fn get_cells(row: &String, cells_to_select: &Vec<usize>, column_delimiter: &String) -> Vec<String> {
     if cells_to_select.len() == 0 {
         // If no cells to select specified, return one element vector of the row
         vec![(*row).clone()]
@@ -139,22 +107,8 @@ fn get_cells(row: &String,
 
 fn main() {
     // Parse arguments
-    let args = Args::parse();
-    let input = if &args.input == "" {
-        // If not input passed, read stdin (i.e. input from pipe)
-        // Shoutout Frazer @ https://stackoverflow.com/a/73157621
-        io::stdin()
-            .lock()
-            .lines()
-            .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n")
-            .to_string()
-    } else if Path::new(&args.input).exists() {
-        // If input string is an extant file, read its content as input
-        fs::read_to_string(&args.input).expect("Input file could not be read.")
-    } else {
-        // If input string is present and not file, use it as input args.input
-        args.input
-    };
+    let args = cli::Args::parse();
+    let input = cli::parse_input(&args.input);
 
     // Parse selectors
     let mut row_selectors = selector::parse_selectors(&args.rows);
