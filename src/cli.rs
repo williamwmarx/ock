@@ -9,7 +9,7 @@ use std::path::Path;
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     /// Rows to select from input
-    #[arg(short, long, allow_negative_numbers = true, required = false)]
+    #[arg(short, long, allow_negative_numbers = true, default_value="")]
     pub rows: String,
 
     /// Row delimiter
@@ -17,7 +17,7 @@ pub struct Args {
     pub row_delimiter: String,
 
     /// Columns to select from input
-    #[arg(short, long, allow_negative_numbers = true, required = false)]
+    #[arg(short, long, allow_negative_numbers = true, default_value="")]
     pub columns: String,
 
     /// Column delimiter
