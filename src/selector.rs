@@ -72,6 +72,10 @@ pub fn parse_selectors(selectors: &String) -> Vec<Selector> {
         let mut sequence = Selector::default();
         // Iterate through components in an individual selector, which are separated by colons
         for (idx, component) in selector.split(":").enumerate() {
+            // If component is empty, we do nothing
+            if component.is_empty() {
+                continue
+            }
             // Try to parse int from component. If we're successful, use that int as a start index,
             // end index, or step. If parse() returns an error, use that component as a regex
             // pattern to match to
