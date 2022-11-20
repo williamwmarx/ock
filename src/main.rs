@@ -108,8 +108,25 @@ fn main() {
             }
         }
     }
-    // Iterate through results and print output
-    for line in output {
-        println!("{}", line.join("\t"));
+
+    // Iterate through results and find max length of each column for pretty printing 
+    let mut max_column_lengths: Vec<usize> = output[0].iter().map(|s| s.len()).collect();
+    for row in &output {
+        for (idx, cell) in row.iter().enumerate() {
+            let cell_length = cell.len();
+            if cell_length > max_column_lengths[idx] {
+                max_column_lengths[idx] = cell_length;
+            }
+        }
+    }
+
+    // Print results to screen
+    for row in &output {
+        let mut formatted_row: String = String::new();
+        for (idx, cell) in row.iter().enumerate() {
+            let formatted_cell = format!("{:width$}", cell, width = max_column_lengths[idx] + 2);
+            formatted_row.push_str(&formatted_cell);
+        }
+        println!("{}", formatted_row)
     }
 }
