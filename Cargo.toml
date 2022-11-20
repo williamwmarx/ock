@@ -3,6 +3,7 @@ name = "ock"
 version = "0.1.0"
 authors=["William W. Marx <oss@marx.sh>"]
 description="A simple, fast command line utility for working with table-like data"
+license = "MIT"
 edition = "2021"
 
 [profile.release]
