@@ -4,9 +4,7 @@ table-like data.
 
 ## Installation
 ```
-git clone https://github.com/williamwmarx/ock
-cd ock
-cargo build
+cargo install ock
 ```
 
 ## Usage
