@@ -5,11 +5,15 @@ mod selector;
 
 include!("utils.rs");
 
-
 fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Selector) -> bool {
     let mut in_sequence = false;
-    if selector.stopped {
-        return in_sequence
+    if item_idx != selector.start_idx
+        && selector.start_idx == selector.end_idx
+        && utils::regex_eq(&selector.start_regex, &selector.end_regex)
+        && !utils::regex_is_default(&selector.start_regex)
+    {
+        // If a regex is provided as the only selector, just check against it
+        return selector.start_regex.is_match(item)
     }
     if (item_idx == selector.start_idx && utils::regex_is_default(&selector.start_regex))
         || selector.start_regex.is_match(item)
@@ -28,15 +32,15 @@ fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Sel
         // Sequence end
         in_sequence = true;
         selector.end_idx = item_idx;
-    } else if item_idx > selector.start_idx && item_idx < selector.end_idx
+    } else if item_idx > selector.start_idx
+        && item_idx < selector.end_idx
         && (item_idx - selector.start_idx) % selector.step == 0
     {
         // Sequence middle
         in_sequence = true;
-    } 
+    }
     in_sequence
 }
-
 
 /// Get vector of columns to use from header row
 fn get_columns(
