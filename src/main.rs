@@ -93,6 +93,40 @@ pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -
     }
 }
 
+/// Format output with column alignment for pretty printing
+#[cfg_attr(test, allow(dead_code))]
+pub fn format_columns(output: &[Vec<String>]) -> Vec<String> {
+    if output.is_empty() {
+        return Vec::new();
+    }
+
+    // Calculate max width for each column
+    let mut col_widths: Vec<usize> = Vec::new();
+    for row in output {
+        for (col_idx, cell) in row.iter().enumerate() {
+            if col_idx >= col_widths.len() {
+                col_widths.push(0);
+            }
+            col_widths[col_idx] = col_widths[col_idx].max(cell.len());
+        }
+    }
+
+    // Format output with alignment
+    let mut result: Vec<String> = Vec::new();
+    for row in output {
+        let mut formatted_row = String::new();
+        for (col_idx, cell) in row.iter().enumerate() {
+            if col_idx == row.len() - 1 {
+                formatted_row.push_str(cell);
+            } else {
+                formatted_row.push_str(&format!("{:width$} ", cell, width = col_widths[col_idx]));
+            }
+        }
+        result.push(formatted_row);
+    }
+    result
+}
+
 fn main() {
     // Parse arguments
     let args = cli::Args::parse();
@@ -129,28 +163,10 @@ fn main() {
         }
     }
 
-    // Iterate through results and find max length of each column for pretty printing
-    if output.is_empty() {
-        return; // No output to print
-    }
-    let mut max_column_lengths: Vec<usize> = output[0].iter().map(|s| s.len()).collect();
-    for row in &output {
-        for (idx, cell) in row.iter().enumerate() {
-            let cell_length = cell.len();
-            if cell_length > max_column_lengths[idx] {
-                max_column_lengths[idx] = cell_length;
-            }
-        }
-    }
-
-    // Print results to screen
-    for row in &output {
-        let mut formatted_row: String = String::new();
-        for (idx, cell) in row.iter().enumerate() {
-            let formatted_cell = format!("{:width$}", cell, width = max_column_lengths[idx] + 2);
-            formatted_row.push_str(&formatted_cell);
-        }
-        println!("{}", formatted_row)
+    // Format and print results
+    let formatted_output = format_columns(&output);
+    for line in formatted_output {
+        println!("{}", line);
     }
 }
 
