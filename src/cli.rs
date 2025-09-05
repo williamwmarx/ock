@@ -52,3 +52,7 @@ pub fn parse_input(input_text: &String) -> String {
         input_text.clone()
     }
 }
+
+#[cfg(test)]
+#[path = "cli_tests.rs"]
+mod cli_tests;

@@ -5,7 +5,8 @@ mod selector;
 
 include!("utils.rs");
 
-fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Selector) -> bool {
+#[cfg_attr(test, allow(dead_code))]
+pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Selector) -> bool {
     let mut in_sequence = false;
     if item_idx != selector.start_idx
         && selector.start_idx == selector.end_idx
@@ -43,7 +44,8 @@ fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Sel
 }
 
 /// Get vector of columns to use from header row
-fn get_columns(
+#[cfg_attr(test, allow(dead_code))]
+pub fn get_columns(
     index_row: &String,
     column_selectors: &mut Vec<selector::Selector>,
     column_delimiter: &String,
@@ -69,7 +71,8 @@ fn get_columns(
 }
 
 /// Grab cells in a row by a list of given indeces
-fn get_cells(row: &String, cells_to_select: &Vec<usize>, column_delimiter: &String) -> Vec<String> {
+#[cfg_attr(test, allow(dead_code))]
+pub fn get_cells(row: &String, cells_to_select: &Vec<usize>, column_delimiter: &String) -> Vec<String> {
     if cells_to_select.len() == 0 {
         // If no cells to select specified, return one element vector of the row
         vec![(*row).clone()]
@@ -109,7 +112,10 @@ fn main() {
         }
     }
 
-    // Iterate through results and find max length of each column for pretty printing 
+    // Iterate through results and find max length of each column for pretty printing
+    if output.is_empty() {
+        return;  // No output to print
+    }
     let mut max_column_lengths: Vec<usize> = output[0].iter().map(|s| s.len()).collect();
     for row in &output {
         for (idx, cell) in row.iter().enumerate() {
@@ -130,3 +136,11 @@ fn main() {
         println!("{}", formatted_row)
     }
 }
+
+#[cfg(test)]
+#[path = "utils_tests.rs"]
+mod utils_tests;
+
+#[cfg(test)]
+#[path = "main_tests.rs"]
+mod main_tests;

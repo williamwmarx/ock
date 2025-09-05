@@ -122,3 +122,7 @@ pub fn parse_selectors(selectors: &String) -> Vec<Selector> {
     // Return all selectors
     sequences
 }
+
+#[cfg(test)]
+#[path = "selector_tests.rs"]
+mod selector_tests;
