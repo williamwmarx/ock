@@ -65,7 +65,7 @@ impl PartialEq for Selector {
 
 /// Parse either row or column selectors, turning Python-like list slicing syntax into vector of
 /// Selector structs
-pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
+pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, String> {
     let mut sequences: Vec<Selector> = Vec::new();
     // Iterate through selectors, which are separated by commas
     for selector in selectors.split(",") {
@@ -98,10 +98,19 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
                         }
                         2 => {
                             // Step value should NOT be decremented - use raw value
-                            // Prevent division by zero by defaulting step=0 to step=1
-                            sequence.step = if *raw_number == 0 { 1 } else { *raw_number };
+                            // Prevent division by zero by rejecting step=0
+                            if *raw_number == 0 {
+                                return Err(format!(
+                                    "Invalid selector '{}': step size cannot be zero. Use step=1 to select every item in the range.",
+                                    selector
+                                ));
+                            }
+                            sequence.step = *raw_number;
                         }
-                        _ => panic!("A selector cannot be more than three components long"),
+                        _ => return Err(format!(
+                            "Invalid selector '{}': A selector cannot be more than three components long",
+                            selector
+                        )),
                     }
                 }
                 Err(_e) => {
@@ -117,8 +126,14 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
                             }
                         }
                         1 => sequence.end_regex = Regex::new(&case_insensitive_regex).unwrap(),
-                        2 => panic!("Step size must be an integer"),
-                        _ => panic!("A selector cannot be more than three components long"),
+                        2 => return Err(format!(
+                            "Invalid selector '{}': Step size must be an integer",
+                            selector
+                        )),
+                        _ => return Err(format!(
+                            "Invalid selector '{}': A selector cannot be more than three components long",
+                            selector
+                        )),
                     }
                 }
             }
@@ -127,7 +142,7 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
         sequences.push(sequence);
     }
     // Return all selectors
-    sequences
+    Ok(sequences)
 }
 
 #[cfg(test)]

@@ -99,8 +99,20 @@ fn main() {
     let input = cli::parse_input(&args.input);
 
     // Parse selectors
-    let mut row_selectors = selector::parse_selectors(&args.rows);
-    let mut column_selectors = selector::parse_selectors(&args.columns);
+    let mut row_selectors = match selector::parse_selectors(&args.rows) {
+        Ok(selectors) => selectors,
+        Err(e) => {
+            eprintln!("Error parsing row selectors: {}", e);
+            std::process::exit(1);
+        }
+    };
+    let mut column_selectors = match selector::parse_selectors(&args.columns) {
+        Ok(selectors) => selectors,
+        Err(e) => {
+            eprintln!("Error parsing column selectors: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     // Parse input data according to arguments
     let mut export_cols: Vec<usize> = Vec::new();

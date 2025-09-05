@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_single_index() {
-        let selectors = parse_selectors(&String::from("5"));
+        let selectors = parse_selectors(&String::from("5")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 4); // 5-1
         assert_eq!(selectors[0].end_idx, 4);
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_range() {
-        let selectors = parse_selectors(&String::from("2:10"));
+        let selectors = parse_selectors(&String::from("2:10")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 1); // 2-1
         assert_eq!(selectors[0].end_idx, 9);   // 10-1
@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_range_with_step() {
-        let selectors = parse_selectors(&String::from("1:10:2"));
+        let selectors = parse_selectors(&String::from("1:10:2")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0); // 1-1 (correct: convert to 0-based index)
         assert_eq!(selectors[0].end_idx, 9);   // 10-1 (correct: convert to 0-based index)
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_multiple() {
-        let selectors = parse_selectors(&String::from("1,5,10"));
+        let selectors = parse_selectors(&String::from("1,5,10")).unwrap();
         assert_eq!(selectors.len(), 3);
         
         assert_eq!(selectors[0].start_idx, 0);
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_regex() {
-        let selectors = parse_selectors(&String::from("pid"));
+        let selectors = parse_selectors(&String::from("pid")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, usize::MAX);
         assert!(selectors[0].start_regex.is_match("PID"));
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_regex_range() {
-        let selectors = parse_selectors(&String::from("start:end"));
+        let selectors = parse_selectors(&String::from("start:end")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, usize::MAX);
         assert!(selectors[0].start_regex.is_match("START"));
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_mixed_regex_and_index() {
-        let selectors = parse_selectors(&String::from("pid,5"));
+        let selectors = parse_selectors(&String::from("pid,5")).unwrap();
         assert_eq!(selectors.len(), 2);
         
         // First selector is a regex
@@ -110,17 +110,17 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_empty_components() {
-        let selectors = parse_selectors(&String::from(":10"));
+        let selectors = parse_selectors(&String::from(":10")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0); // Default start
         assert_eq!(selectors[0].end_idx, 9);   // 10-1
         
-        let selectors = parse_selectors(&String::from("5:"));
+        let selectors = parse_selectors(&String::from("5:")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 4);         // 5-1
         assert_eq!(selectors[0].end_idx, usize::MAX); // Default end
         
-        let selectors = parse_selectors(&String::from("::2"));
+        let selectors = parse_selectors(&String::from("::2")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0);         // Default start
         assert_eq!(selectors[0].end_idx, usize::MAX);  // Default end
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_complex_multiple() {
-        let selectors = parse_selectors(&String::from("1:5,pid,10:20:2,name"));
+        let selectors = parse_selectors(&String::from("1:5,pid,10:20:2,name")).unwrap();
         assert_eq!(selectors.len(), 4);
         
         // First: range 1:5
@@ -150,32 +150,36 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Step size must be an integer")]
     fn test_parse_selectors_non_integer_step() {
-        parse_selectors(&String::from("1:10:abc"));
+        let result = parse_selectors(&String::from("1:10:abc"));
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("Step size must be an integer"));
     }
 
     #[test]
-    #[should_panic(expected = "A selector cannot be more than three components long")]
     fn test_parse_selectors_too_many_components() {
-        parse_selectors(&String::from("1:2:3:4"));
+        let result = parse_selectors(&String::from("1:2:3:4"));
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("A selector cannot be more than three components long"));
     }
 
     #[test]
     fn test_parse_selectors_edge_cases() {
         // Test with 1 as index (should become 0)
-        let selectors = parse_selectors(&String::from("1"));
+        let selectors = parse_selectors(&String::from("1")).unwrap();
         assert_eq!(selectors[0].start_idx, 0);
         assert_eq!(selectors[0].end_idx, 0);
         
         // Test empty string
-        let selectors = parse_selectors(&String::from(""));
+        let selectors = parse_selectors(&String::from("")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0);
         assert_eq!(selectors[0].end_idx, usize::MAX);
         
         // Test multiple commas
-        let selectors = parse_selectors(&String::from("1,,3"));
+        let selectors = parse_selectors(&String::from("1,,3")).unwrap();
         assert_eq!(selectors.len(), 3);
         assert_eq!(selectors[0].start_idx, 0);
         assert_eq!(selectors[1].start_idx, 0); // Empty selector gets default
@@ -183,8 +187,17 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_selectors_step_zero_error() {
+        let result = parse_selectors(&String::from("1:10:0"));
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("step size cannot be zero"));
+        assert!(error_msg.contains("1:10:0"));
+    }
+
+    #[test]
     fn test_parse_selectors_case_insensitive_regex() {
-        let selectors = parse_selectors(&String::from("PID"));
+        let selectors = parse_selectors(&String::from("PID")).unwrap();
         assert!(selectors[0].start_regex.is_match("pid"));
         assert!(selectors[0].start_regex.is_match("PID"));
         assert!(selectors[0].start_regex.is_match("Pid"));
@@ -193,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_parse_selectors_partial_match_regex() {
-        let selectors = parse_selectors(&String::from("user"));
+        let selectors = parse_selectors(&String::from("user")).unwrap();
         assert!(selectors[0].start_regex.is_match("user"));
         assert!(selectors[0].start_regex.is_match("username"));
         assert!(selectors[0].start_regex.is_match("superuser"));
