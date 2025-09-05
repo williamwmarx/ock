@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::selector::{parse_selectors, Selector};
-    use crate::{format_columns, get_cells, get_columns, get_columns_with_match_info, item_in_sequence};
-    use regex::Regex;
+    use crate::selector::{get_or_compile_regex, parse_selectors, Selector};
+    use crate::{
+        format_columns, get_cells, get_columns, get_columns_with_match_info, item_in_sequence,
+    };
 
     #[test]
     fn test_item_in_sequence_single_index() {
@@ -56,8 +57,8 @@ mod tests {
     #[test]
     fn test_item_in_sequence_regex_single() {
         let mut selector = Selector::default();
-        selector.start_regex = Regex::new(r"(?i).*pid.*").unwrap();
-        selector.end_regex = Regex::new(r"(?i).*pid.*").unwrap();
+        selector.start_regex = get_or_compile_regex(r"(?i).*pid.*").unwrap();
+        selector.end_regex = get_or_compile_regex(r"(?i).*pid.*").unwrap();
         selector.start_idx = i64::MAX;
         selector.end_idx = i64::MAX;
 
@@ -74,8 +75,8 @@ mod tests {
     #[test]
     fn test_item_in_sequence_regex_range() {
         let mut selector = Selector::default();
-        selector.start_regex = Regex::new(r"(?i).*start.*").unwrap();
-        selector.end_regex = Regex::new(r"(?i).*end.*").unwrap();
+        selector.start_regex = get_or_compile_regex(r"(?i).*start.*").unwrap();
+        selector.end_regex = get_or_compile_regex(r"(?i).*end.*").unwrap();
 
         let start = String::from("START");
         let middle = String::from("MIDDLE");
@@ -585,8 +586,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "user,pid,command";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 3);
         assert_eq!(unmatched.len(), 0); // All should match
     }
@@ -598,8 +600,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "user,missing,command";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 2); // USER and COMMAND match
         assert_eq!(unmatched.len(), 1);
         assert_eq!(unmatched[0], "missing");
@@ -612,8 +615,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "missing1,missing2";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 0);
         assert_eq!(unmatched.len(), 2);
         assert_eq!(unmatched[0], "missing1");
@@ -627,8 +631,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "1,missing,command";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 2); // Column 1 (USER) and COMMAND match
         assert_eq!(unmatched.len(), 1);
         assert_eq!(unmatched[0], "missing");
@@ -641,8 +646,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 0);
         assert_eq!(unmatched.len(), 0);
     }
@@ -654,8 +660,9 @@ mod tests {
         let delimiter = String::from(r"\s");
         let original_str = "10,20";
 
-        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
-        
+        let (cols, unmatched) =
+            get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+
         assert_eq!(cols.len(), 0);
         assert_eq!(unmatched.len(), 2);
         assert_eq!(unmatched[0], "10");
