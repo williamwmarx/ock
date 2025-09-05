@@ -34,7 +34,7 @@ pub fn item_in_sequence(item_idx: usize, item: &str, selector: &mut selector::Se
     } else if selector.start_idx != usize::MAX
         && ((item_idx == selector.end_idx
             && item_idx >= selector.start_idx
-            && (item_idx - selector.start_idx) % selector.step == 0)
+            && item_idx.saturating_sub(selector.start_idx) % selector.step == 0)
             || selector.end_regex.is_match(item))
     {
         // Sequence end
@@ -42,7 +42,7 @@ pub fn item_in_sequence(item_idx: usize, item: &str, selector: &mut selector::Se
         selector.end_idx = item_idx;
     } else if item_idx > selector.start_idx
         && item_idx < selector.end_idx
-        && (item_idx - selector.start_idx) % selector.step == 0
+        && item_idx.saturating_sub(selector.start_idx) % selector.step == 0
     {
         // Sequence middle
         in_sequence = true;
