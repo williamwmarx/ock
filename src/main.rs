@@ -90,7 +90,10 @@ pub fn get_columns_with_match_info(
     original_selectors_str: &str,
 ) -> Result<(Vec<usize>, Vec<String>), SelectorError> {
     if column_selectors.is_empty() {
-        return Ok((Vec::new(), Vec::new()));
+        // When no column selectors provided, return all column indices
+        let columns = utils::split(index_row, column_delimiter)?;
+        let all_indices: Vec<usize> = (0..columns.len()).collect();
+        return Ok((all_indices, Vec::new()));
     }
 
     let mut export_column_idxs: Vec<usize> = Vec::new();
@@ -219,63 +222,55 @@ fn main() {
         }
     };
 
-    if select_full_row {
-        // No column selectors provided - output full rows without formatting
-        for (row_idx, row) in split_rows.iter().enumerate() {
-            for row_selector in row_selectors.iter_mut() {
-                if item_in_sequence(row_idx, row, row_selector, split_rows.len()) {
-                    println!("{}", row);
-                }
-            }
-        }
-    } else {
-        // Column selectors provided - process normally
-        let mut export_cols: Vec<usize> = Vec::new();
-        let mut output: Vec<Vec<String>> = Vec::new();
+    // Always process through column formatting pipeline
+    let mut export_cols: Vec<usize> = Vec::new();
+    let mut output: Vec<Vec<String>> = Vec::new();
 
-        for (row_idx, row) in split_rows.iter().enumerate() {
-            if row_idx == 0 {
-                let (cols, unmatched) = match get_columns_with_match_info(
-                    row, 
-                    &mut column_selectors, 
-                    &args.column_delimiter, 
-                    &args.columns
-                ) {
-                    Ok((cols, unmatched)) => (cols, unmatched),
-                    Err(e) => {
-                        eprintln!("Error: {}", e);
-                        process::exit(1);
-                    }
-                };
-                export_cols = cols;
-                
+    for (row_idx, row) in split_rows.iter().enumerate() {
+        if row_idx == 0 {
+            let (cols, unmatched) = match get_columns_with_match_info(
+                row, 
+                &mut column_selectors, 
+                &args.column_delimiter, 
+                &args.columns
+            ) {
+                Ok((cols, unmatched)) => (cols, unmatched),
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            };
+            export_cols = cols;
+            
+            // Only show warnings if specific column selectors were provided
+            if !select_full_row {
                 if export_cols.is_empty() {
                     eprintln!("Warning: No valid columns found for selection");
                 } else if !unmatched.is_empty() {
                     eprintln!("Warning: Column selectors did not match any columns: {}", unmatched.join(", "));
                 }
             }
-            for row_selector in row_selectors.iter_mut() {
-                if item_in_sequence(row_idx, row, row_selector, split_rows.len()) {
-                    let cells =
-                        match get_cells(row, &export_cols, &args.column_delimiter, select_full_row)
-                        {
-                            Ok(cells) => cells,
-                            Err(e) => {
-                                eprintln!("Error: {}", e);
-                                process::exit(1);
-                            }
-                        };
-                    output.push(cells);
-                }
+        }
+        for row_selector in row_selectors.iter_mut() {
+            if item_in_sequence(row_idx, row, row_selector, split_rows.len()) {
+                let cells =
+                    match get_cells(row, &export_cols, &args.column_delimiter, select_full_row)
+                    {
+                        Ok(cells) => cells,
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            process::exit(1);
+                        }
+                    };
+                output.push(cells);
             }
         }
+    }
 
-        // Format and print results
-        let formatted_output = format_columns(&output);
-        for line in formatted_output {
-            println!("{}", line);
-        }
+    // Format and print results
+    let formatted_output = format_columns(&output);
+    for line in formatted_output {
+        println!("{}", line);
     }
 }
 
