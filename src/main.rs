@@ -3,6 +3,7 @@ use std::process;
 
 mod cli;
 mod selector;
+use selector::SelectorError;
 
 include!("utils.rs");
 
@@ -55,7 +56,7 @@ pub fn get_columns(
     index_row: &str,
     column_selectors: &mut [selector::Selector],
     column_delimiter: &str,
-) -> Result<Vec<usize>, String> {
+) -> Result<Vec<usize>, SelectorError> {
     if column_selectors.is_empty() {
         // Return blank vector if no column selectors present
         Ok(Vec::new())
@@ -79,7 +80,7 @@ pub fn get_columns(
 
 /// Grab cells in a row by a list of given indeces
 #[cfg_attr(test, allow(dead_code))]
-pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -> Result<Vec<String>, String> {
+pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -> Result<Vec<String>, SelectorError> {
     if cells_to_select.is_empty() {
         // If no cells to select specified, return one element vector of the row
         Ok(vec![row.to_string()])

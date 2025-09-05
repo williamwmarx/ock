@@ -5,6 +5,7 @@ include!("utils.rs");
 #[derive(Debug)]
 pub enum SelectorError {
     InvalidRegex { pattern: String, source: regex::Error },
+    InvalidSelector { selector: String, reason: String },
 }
 
 impl fmt::Display for SelectorError {
@@ -12,6 +13,9 @@ impl fmt::Display for SelectorError {
         match self {
             SelectorError::InvalidRegex { pattern, source } => {
                 write!(f, "Invalid regex pattern '{}': {}", pattern, source)
+            }
+            SelectorError::InvalidSelector { selector, reason } => {
+                write!(f, "Invalid selector '{}': {}", selector, reason)
             }
         }
     }
@@ -21,6 +25,7 @@ impl std::error::Error for SelectorError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             SelectorError::InvalidRegex { source, .. } => Some(source),
+            SelectorError::InvalidSelector { .. } => None,
         }
     }
 }
@@ -146,17 +151,17 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                             // Step value should NOT be decremented - use raw value
                             // Prevent division by zero by rejecting step=0
                             if *raw_number == 0 {
-                                return Err(format!(
-                                    "Invalid selector '{}': step size cannot be zero. Use step=1 to select every item in the range.",
-                                    selector
-                                ));
+                                return Err(SelectorError::InvalidSelector {
+                                    selector: selector.to_string(),
+                                    reason: "step size cannot be zero. Use step=1 to select every item in the range.".to_string(),
+                                });
                             }
                             sequence.step = *raw_number;
                         }
-                        _ => return Err(format!(
-                            "Invalid selector '{}': A selector cannot be more than three components long",
-                            selector
-                        )),
+                        _ => return Err(SelectorError::InvalidSelector {
+                            selector: selector.to_string(),
+                            reason: "A selector cannot be more than three components long".to_string(),
+                        }),
                     }
                 }
                 Err(_e) => {
@@ -184,8 +189,14 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                                 pattern: case_insensitive_regex, 
                                 source: e 
                             })?,
-                        2 => panic!("Step size must be an integer"),
-                        _ => panic!("A selector cannot be more than three components long"),
+                        2 => return Err(SelectorError::InvalidSelector {
+                            selector: selector.to_string(),
+                            reason: "Step size must be an integer".to_string(),
+                        }),
+                        _ => return Err(SelectorError::InvalidSelector {
+                            selector: selector.to_string(),
+                            reason: "A selector cannot be more than three components long".to_string(),
+                        }),
                     }
                 }
             }

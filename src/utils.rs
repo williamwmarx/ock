@@ -1,5 +1,6 @@
 mod utils {
     use regex::Regex;
+    use crate::SelectorError;
 
     /// Test is two regex expressions are equal
     /// This needs to be done as there's no PartialEq provided by regex::Regex
@@ -19,9 +20,9 @@ mod utils {
     /// 
     /// # Errors
     /// 
-    /// Returns a formatted error string if the delimiter regex pattern fails to compile.
+    /// Returns `SelectorError::InvalidRegex` if the delimiter regex pattern fails to compile.
     #[allow(dead_code)]
-    pub fn split(text: &str, delimiter: &str) -> Result<Vec<String>, String> {
+    pub fn split(text: &str, delimiter: &str) -> Result<Vec<String>, SelectorError> {
         if delimiter.is_empty() {
             // Split by lines if empty delmiter passed. This should be faster than regex split
             Ok(text.lines()
@@ -31,7 +32,10 @@ mod utils {
         } else {
             // Split by regex
             let regex = Regex::new(delimiter)
-                .map_err(|e| format!("Invalid delimiter pattern '{}': {}", delimiter, e))?;
+                .map_err(|e| SelectorError::InvalidRegex { 
+                    pattern: delimiter.to_string(), 
+                    source: e 
+                })?;
             Ok(regex
                 .split(text)
                 .filter(|s| !s.is_empty())

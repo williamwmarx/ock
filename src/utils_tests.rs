@@ -46,7 +46,7 @@ mod tests {
     fn test_split_empty_delimiter() {
         let text = String::from("line1\nline2\nline3\n");
         let delimiter = String::from("");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "line1");
@@ -58,7 +58,7 @@ mod tests {
     fn test_split_empty_delimiter_with_empty_lines() {
         let text = String::from("line1\n\nline2\n\n\nline3");
         let delimiter = String::from("");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         // Empty lines should be filtered out
         assert_eq!(result.len(), 3);
@@ -71,7 +71,7 @@ mod tests {
     fn test_split_whitespace_delimiter() {
         let text = String::from("word1 word2  word3\tword4");
         let delimiter = String::from(r"\s+");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 4);
         assert_eq!(result[0], "word1");
@@ -84,7 +84,7 @@ mod tests {
     fn test_split_comma_delimiter() {
         let text = String::from("apple,banana,cherry");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "apple");
@@ -96,7 +96,7 @@ mod tests {
     fn test_split_pipe_delimiter() {
         let text = String::from("col1|col2|col3");
         let delimiter = String::from(r"\|");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "col1");
@@ -108,7 +108,7 @@ mod tests {
     fn test_split_tab_delimiter() {
         let text = String::from("field1\tfield2\tfield3");
         let delimiter = String::from(r"\t");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "field1");
@@ -120,7 +120,7 @@ mod tests {
     fn test_split_custom_delimiter() {
         let text = String::from("part1::part2::part3");
         let delimiter = String::from("::");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "part1");
@@ -132,7 +132,7 @@ mod tests {
     fn test_split_regex_delimiter() {
         let text = String::from("num1num2num3");
         let delimiter = String::from(r"\d+"); // Split on digits
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "num");
@@ -144,7 +144,7 @@ mod tests {
     fn test_split_filters_empty_strings() {
         let text = String::from(",,a,b,,c,,");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         // Empty strings should be filtered out
         assert_eq!(result.len(), 3);
@@ -157,7 +157,7 @@ mod tests {
     fn test_split_complex_multiline() {
         let text = String::from("USER     PID   %CPU  %MEM    VSZ   RSS\nroot       1    0.0   0.0  12345  6789\nuser     123    1.5   2.3  98765  4321");
         let delimiter = String::from(r"\n");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert!(result[0].starts_with("USER"));
@@ -170,20 +170,20 @@ mod tests {
         // Empty text
         let text = String::from("");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         assert_eq!(result.len(), 0);
         
         // Text with no delimiters
         let text = String::from("singleword");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "singleword");
         
         // Text that is just delimiters
         let text = String::from(",,,");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         assert_eq!(result.len(), 0); // All empty strings filtered out
     }
 
@@ -191,7 +191,7 @@ mod tests {
     fn test_split_preserves_internal_spaces() {
         let text = String::from("hello world,foo bar,baz qux");
         let delimiter = String::from(",");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "hello world");
@@ -203,7 +203,7 @@ mod tests {
     fn test_split_default_whitespace_behavior() {
         let text = String::from("word1 word2  word3\t\tword4\n");
         let delimiter = String::from(r"\s");
-        let result = utils::split(&text, &delimiter);
+        let result = utils::split(&text, &delimiter).unwrap();
         
         // Should split on any whitespace
         assert!(result.len() >= 4);
