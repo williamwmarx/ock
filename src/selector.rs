@@ -209,10 +209,37 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
     // Iterate through selectors, which are separated by commas
     for selector in selectors.split(",") {
         let mut sequence = Selector::new()?;
+        let components: Vec<&str> = selector.split(":").collect();
+        
+        // Handle completely empty selector (from consecutive commas like "1,,3")
+        if selector.is_empty() {
+            // Empty selector means select all - Python slice [:] semantics
+            sequence.start_idx = 0;
+            sequence.end_idx = i64::MAX;
+            sequence.step = 1;
+            sequences.push(sequence);
+            continue;
+        }
+        
         // Iterate through components in an individual selector, which are separated by colons
-        for (idx, component) in selector.split(":").enumerate() {
-            // If component is empty, we do nothing
+        for (idx, component) in components.iter().enumerate() {
+            // Handle empty components with Python slice semantics
             if component.is_empty() {
+                match idx {
+                    0 => {
+                        // Empty start component means start from beginning
+                        sequence.start_idx = 0;
+                    }
+                    1 => {
+                        // Empty end component means go to the end
+                        sequence.end_idx = i64::MAX;
+                    }
+                    2 => {
+                        // Empty step component means default step of 1
+                        sequence.step = 1;
+                    }
+                    _ => {}
+                }
                 continue;
             }
             // Try to parse int from component. If we're successful, use that int as a start index,

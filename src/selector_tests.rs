@@ -178,12 +178,44 @@ mod tests {
         assert_eq!(selectors[0].start_idx, 0);
         assert_eq!(selectors[0].end_idx, i64::MAX);
 
-        // Test multiple commas
+        // Test multiple commas - empty selectors should select all
         let selectors = parse_selectors(&String::from("1,,3")).unwrap();
         assert_eq!(selectors.len(), 3);
         assert_eq!(selectors[0].start_idx, 1);
-        assert_eq!(selectors[1].start_idx, 0); // Empty selector gets default
+        assert_eq!(selectors[1].start_idx, 0); // Empty selector selects all
+        assert_eq!(selectors[1].end_idx, i64::MAX); // Empty selector selects all
         assert_eq!(selectors[2].start_idx, 3);
+    }
+
+    #[test]
+    fn test_parse_selectors_python_slice_semantics() {
+        // Test "1::" - from index 1 to end with default step
+        let selectors = parse_selectors(&String::from("1::")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 1);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 1);
+
+        // Test "::2" - every 2nd item from start to end
+        let selectors = parse_selectors(&String::from("::2")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 2);
+
+        // Test ":5:" - first 5 items (start=0, end=5, step=1)
+        let selectors = parse_selectors(&String::from(":5:")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, 5);
+        assert_eq!(selectors[0].step, 1);
+
+        // Test "::" - all items
+        let selectors = parse_selectors(&String::from("::")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 1);
     }
 
     #[test]
