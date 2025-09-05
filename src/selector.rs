@@ -82,18 +82,24 @@ pub fn parse_selectors(selectors: &String) -> Vec<Selector> {
             let parsed_component = component.parse::<usize>();
             match parsed_component {
                 Ok(_ok) => {
-                    // Subtract 1 from row, so 1:10 selects rows 1 to 10, not 2 to 11
-                    let number = parsed_component.as_ref().unwrap() - 1;
+                    let raw_number = parsed_component.as_ref().unwrap();
                     match idx {
                         0 => {
-                            sequence.start_idx = number;
+                            // Subtract 1 from start index for 1-based to 0-based conversion
+                            sequence.start_idx = raw_number - 1;
                             // If this is the full selection, set this to the end index as well
                             if selector.matches(":").count() == 0 {
-                                sequence.end_idx = number;
+                                sequence.end_idx = raw_number - 1;
                             }
                         }
-                        1 => sequence.end_idx = number,
-                        2 => sequence.step = number,
+                        1 => {
+                            // Subtract 1 from end index for 1-based to 0-based conversion
+                            sequence.end_idx = raw_number - 1;
+                        }
+                        2 => {
+                            // Step value should NOT be decremented - use raw value
+                            sequence.step = *raw_number;
+                        }
                         _ => panic!("A selector cannot be more than three components long"),
                     }
                 }
