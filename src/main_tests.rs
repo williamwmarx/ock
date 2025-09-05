@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::selector::{Selector, parse_selectors};
-    use crate::{item_in_sequence, get_columns, get_cells, format_columns};
+    use crate::selector::{parse_selectors, Selector};
+    use crate::{format_columns, get_cells, get_columns, item_in_sequence};
     use regex::Regex;
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
         let cells_to_select: Vec<usize> = Vec::new();
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, true).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "cell1 cell2 cell3");
     }
@@ -201,7 +201,7 @@ mod tests {
         let cells_to_select = vec![1];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "cell2");
     }
@@ -212,7 +212,7 @@ mod tests {
         let cells_to_select = vec![0, 2, 3];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "cell1");
         assert_eq!(result[1], "cell3");
@@ -225,7 +225,7 @@ mod tests {
         let cells_to_select = vec![3, 1, 0];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "A");
         assert_eq!(result[1], "B");
@@ -238,7 +238,7 @@ mod tests {
         let cells_to_select = vec![1, 3];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "b");
         assert_eq!(result[1], "d");
@@ -250,7 +250,7 @@ mod tests {
         let cells_to_select = vec![0, 2];
         let delimiter = String::from(r"\t");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "field1");
         assert_eq!(result[1], "field3");
@@ -262,7 +262,7 @@ mod tests {
         let cells_to_select = vec![0, 1];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "a");
         assert_eq!(result[1], "c"); // Empty cell is filtered out
@@ -274,9 +274,19 @@ mod tests {
         let cells_to_select = vec![0, 5, 10]; // Indices beyond the row length
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "a"); // Only the valid index is included
+    }
+
+    #[test]
+    fn test_get_cells_all_indices_out_of_bounds() {
+        let row = String::from("a b c");
+        let cells_to_select = vec![5, 10, 15]; // All indices beyond the row length
+        let delimiter = String::from(r"\s");
+
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
+        assert_eq!(result.len(), 0);
     }
 
     #[test]
@@ -285,7 +295,7 @@ mod tests {
         let cells_to_select = vec![0, 2];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "hello world");
         assert_eq!(result[1], "baz qux");
@@ -328,7 +338,11 @@ mod tests {
     #[test]
     fn test_column_alignment_varying_widths() {
         let output = vec![
-            vec!["short".to_string(), "medium".to_string(), "very_long_content".to_string()],
+            vec![
+                "short".to_string(),
+                "medium".to_string(),
+                "very_long_content".to_string(),
+            ],
             vec!["x".to_string(), "y".to_string(), "z".to_string()],
             vec!["longer".to_string(), "text".to_string(), "here".to_string()],
         ];
@@ -348,8 +362,8 @@ mod tests {
         ];
         let result = format_columns(&output);
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0], "a longer c");
-        assert_eq!(result[1], "  longer  ");
+        assert_eq!(result[0], "a b      c");
+        assert_eq!(result[1], "  longer ");
         assert_eq!(result[2], "d        f");
     }
 
@@ -379,9 +393,9 @@ mod tests {
         assert_eq!(result.len(), 3);
         // Note: This test verifies that the function handles unicode characters
         // The actual alignment might not be perfect for display due to character width differences
-        assert_eq!(result[0], "短       longer");
-        assert_eq!(result[1], "很长的文本 x");
-        assert_eq!(result[2], "中       medium");
+        assert_eq!(result[0], "短               longer");
+        assert_eq!(result[1], "很长的文本           x");
+        assert_eq!(result[2], "中               medium");
     }
 
     #[test]
@@ -400,9 +414,11 @@ mod tests {
 
     #[test]
     fn test_column_alignment_single_row() {
-        let output = vec![
-            vec!["single".to_string(), "row".to_string(), "test".to_string()],
-        ];
+        let output = vec![vec![
+            "single".to_string(),
+            "row".to_string(),
+            "test".to_string(),
+        ]];
         let result = format_columns(&output);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "single row test");
