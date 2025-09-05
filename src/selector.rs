@@ -144,9 +144,19 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                         }
                         2 => {
                             // Step value should NOT be decremented - use raw value
+                            // Prevent division by zero by rejecting step=0
+                            if *raw_number == 0 {
+                                return Err(format!(
+                                    "Invalid selector '{}': step size cannot be zero. Use step=1 to select every item in the range.",
+                                    selector
+                                ));
+                            }
                             sequence.step = *raw_number;
                         }
-                        _ => panic!("A selector cannot be more than three components long"),
+                        _ => return Err(format!(
+                            "Invalid selector '{}': A selector cannot be more than three components long",
+                            selector
+                        )),
                     }
                 }
                 Err(_e) => {
