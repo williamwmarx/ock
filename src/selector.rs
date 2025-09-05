@@ -98,7 +98,8 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
                         }
                         2 => {
                             // Step value should NOT be decremented - use raw value
-                            sequence.step = *raw_number;
+                            // Prevent division by zero by defaulting step=0 to step=1
+                            sequence.step = if *raw_number == 0 { 1 } else { *raw_number };
                         }
                         _ => panic!("A selector cannot be more than three components long"),
                     }
