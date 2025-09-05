@@ -27,22 +27,22 @@ impl Default for Selector {
     /// Defaults to implement a new selector without defining each field individually
     fn default() -> Selector {
         Selector {
-            /// Default start to 0, the first row/column
+            // Default start to 0, the first row/column
             start_idx: 0,
 
-            /// Default start to ".^", an impossible Regex that nothing will match
+            // Default start to ".^", an impossible Regex that nothing will match
             start_regex: Regex::new(r".^").unwrap(),
 
-            /// Default end to the max usize value (i.e. 2^64 - 1 on an amd64 machine)
+            // Default end to the max usize value (i.e. 2^64 - 1 on an amd64 machine)
             end_idx: std::usize::MAX,
 
-            /// Default end to ".^", an impossible Regex that nothing will match
+            // Default end to ".^", an impossible Regex that nothing will match
             end_regex: Regex::new(r".^").unwrap(),
 
-            /// Default step to 1 to get each row
+            // Default step to 1 to get each row
             step: 1,
 
-            /// Default stopped to false so we output rows unless otherwise specified
+            // Default stopped to false so we output rows unless otherwise specified
             stopped: false,
         }
     }
