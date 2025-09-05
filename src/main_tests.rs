@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::selector::{parse_selectors, Selector};
-    use crate::{format_columns, get_cells, get_columns, item_in_sequence};
+    use crate::{format_columns, get_cells, get_columns, get_columns_with_match_info, item_in_sequence};
     use regex::Regex;
 
     #[test]
@@ -447,5 +447,176 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], format!("short {}", long_string));
         assert_eq!(result[1], format!("x     {}", "y"));
+    }
+
+    // Tests for unmatched column selectors
+    #[test]
+    fn test_get_columns_no_matches() {
+        let row = String::from("col1 col2 col3");
+        let mut selectors = parse_selectors(&String::from("nonexistent")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 0); // Should return empty vector
+    }
+
+    #[test]
+    fn test_get_columns_mixed_valid_invalid() {
+        let row = String::from("USER PID COMMAND");
+        let mut selectors = parse_selectors(&String::from("user,nonexistent,command")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 2); // Should find USER and COMMAND
+        assert_eq!(result[0], 0); // USER is index 0
+        assert_eq!(result[1], 2); // COMMAND is index 2
+    }
+
+    #[test]
+    fn test_get_columns_regex_no_match() {
+        let row = String::from("USER PID COMMAND");
+        let mut selectors = parse_selectors(&String::from("memory,cpu,disk")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 0); // No regex matches
+    }
+
+    #[test]
+    fn test_get_columns_numeric_out_of_bounds() {
+        let row = String::from("col1 col2 col3");
+        let mut selectors = parse_selectors(&String::from("10,20,30")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 0); // All indices out of bounds
+    }
+
+    #[test]
+    fn test_get_columns_mixed_numeric_regex_no_matches() {
+        let row = String::from("a b c");
+        let mut selectors = parse_selectors(&String::from("10,missing,xyz")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 0); // Neither numeric nor regex matches
+    }
+
+    #[test]
+    fn test_get_columns_partial_range_match() {
+        let row = String::from("col1 col2");
+        let mut selectors = parse_selectors(&String::from("1:5")).unwrap(); // Range extends beyond available columns
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 2); // Should get both available columns (0 and 1)
+        assert_eq!(result[0], 0);
+        assert_eq!(result[1], 1);
+    }
+
+    #[test]
+    fn test_get_columns_empty_input() {
+        let row = String::from("");
+        let mut selectors = parse_selectors(&String::from("1,2,test")).unwrap();
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 0); // No columns in empty input
+    }
+
+    #[test]
+    fn test_get_columns_case_sensitive_regex() {
+        let row = String::from("USER pid Command");
+        let mut selectors = parse_selectors(&String::from("PID")).unwrap(); // Different case
+        let delimiter = String::from(r"\s");
+
+        let result = get_columns(&row, &mut selectors, &delimiter).unwrap();
+        assert_eq!(result.len(), 1); // Should match (case-insensitive)
+        assert_eq!(result[0], 1);
+    }
+
+    // Tests for get_columns_with_match_info
+    #[test]
+    fn test_get_columns_with_match_info_all_match() {
+        let row = String::from("USER PID COMMAND");
+        let mut selectors = parse_selectors(&String::from("user,pid,command")).unwrap();
+        let delimiter = String::from(r"\s");
+        let original_str = "user,pid,command";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 3);
+        assert_eq!(unmatched.len(), 0); // All should match
+    }
+
+    #[test]
+    fn test_get_columns_with_match_info_partial_match() {
+        let row = String::from("USER PID COMMAND");
+        let mut selectors = parse_selectors(&String::from("user,missing,command")).unwrap();
+        let delimiter = String::from(r"\s");
+        let original_str = "user,missing,command";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 2); // USER and COMMAND match
+        assert_eq!(unmatched.len(), 1);
+        assert_eq!(unmatched[0], "missing");
+    }
+
+    #[test]
+    fn test_get_columns_with_match_info_no_match() {
+        let row = String::from("col1 col2 col3");
+        let mut selectors = parse_selectors(&String::from("missing1,missing2")).unwrap();
+        let delimiter = String::from(r"\s");
+        let original_str = "missing1,missing2";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 0);
+        assert_eq!(unmatched.len(), 2);
+        assert_eq!(unmatched[0], "missing1");
+        assert_eq!(unmatched[1], "missing2");
+    }
+
+    #[test]
+    fn test_get_columns_with_match_info_mixed_numeric_regex() {
+        let row = String::from("USER PID COMMAND");
+        let mut selectors = parse_selectors(&String::from("1,missing,command")).unwrap();
+        let delimiter = String::from(r"\s");
+        let original_str = "1,missing,command";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 2); // Column 1 (USER) and COMMAND match
+        assert_eq!(unmatched.len(), 1);
+        assert_eq!(unmatched[0], "missing");
+    }
+
+    #[test]
+    fn test_get_columns_with_match_info_empty_selectors() {
+        let row = String::from("col1 col2 col3");
+        let mut selectors: Vec<Selector> = Vec::new();
+        let delimiter = String::from(r"\s");
+        let original_str = "";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 0);
+        assert_eq!(unmatched.len(), 0);
+    }
+
+    #[test]
+    fn test_get_columns_with_match_info_numeric_out_of_bounds() {
+        let row = String::from("col1 col2");
+        let mut selectors = parse_selectors(&String::from("10,20")).unwrap();
+        let delimiter = String::from(r"\s");
+        let original_str = "10,20";
+
+        let (cols, unmatched) = get_columns_with_match_info(&row, &mut selectors, &delimiter, original_str).unwrap();
+        
+        assert_eq!(cols.len(), 0);
+        assert_eq!(unmatched.len(), 2);
+        assert_eq!(unmatched[0], "10");
+        assert_eq!(unmatched[1], "20");
     }
 }
