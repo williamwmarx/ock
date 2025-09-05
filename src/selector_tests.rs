@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use regex::Regex;
+    use std::sync::Arc;
 
     #[test]
     fn test_selector_default() {
@@ -25,7 +25,7 @@ mod tests {
         assert_ne!(selector1, selector3);
 
         let mut selector4 = Selector::default();
-        selector4.start_regex = Regex::new(r"test").unwrap();
+        selector4.start_regex = get_or_compile_regex("test").unwrap();
         assert_ne!(selector1, selector4);
     }
 
@@ -273,5 +273,35 @@ mod tests {
         assert!(selectors[0].start_regex.is_match("username"));
         assert!(selectors[0].start_regex.is_match("superuser"));
         assert!(selectors[0].start_regex.is_match("multiuser"));
+    }
+
+    #[test]
+    fn test_get_or_compile_regex_caches_patterns() {
+        {
+            let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+            cache.clear();
+        }
+        let r1 = get_or_compile_regex("foo_cache_test").unwrap();
+        let r2 = get_or_compile_regex("foo_cache_test").unwrap();
+        assert!(Arc::ptr_eq(&r1, &r2));
+        let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(cache.contains_key("foo_cache_test"));
+    }
+
+    #[test]
+    fn test_get_or_compile_regex_thread_safe() {
+        {
+            let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+            cache.clear();
+        }
+        let handles: Vec<_> = (0..10)
+            .map(|_| std::thread::spawn(|| get_or_compile_regex("thread_safe_test").unwrap()))
+            .collect();
+        let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+        for r in &results[1..] {
+            assert!(Arc::ptr_eq(&results[0], r));
+        }
+        let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(cache.contains_key("thread_safe_test"));
     }
 }

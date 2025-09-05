@@ -182,6 +182,7 @@ name = "ock"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "once_cell",
  "regex",
  "tempfile",
 ]
