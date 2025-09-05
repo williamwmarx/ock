@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::io::Write;
+use std::process::Command;
 use tempfile::NamedTempFile;
 
 fn run_ock(args: Vec<&str>) -> String {
@@ -9,14 +9,14 @@ fn run_ock(args: Vec<&str>) -> String {
         .args(&args)
         .output()
         .expect("Failed to execute command");
-    
+
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 fn run_ock_with_stdin(stdin_data: &str, args: Vec<&str>) -> String {
-    use std::process::Stdio;
     use std::io::Write;
-    
+    use std::process::Stdio;
+
     let mut child = Command::new("cargo")
         .arg("run")
         .arg("--")
@@ -25,11 +25,13 @@ fn run_ock_with_stdin(stdin_data: &str, args: Vec<&str>) -> String {
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
-    
+
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(stdin_data.as_bytes()).expect("Failed to write to stdin");
+        stdin
+            .write_all(stdin_data.as_bytes())
+            .expect("Failed to write to stdin");
     }
-    
+
     let output = child.wait_with_output().expect("Failed to wait for child");
     String::from_utf8_lossy(&output.stdout).to_string()
 }
@@ -84,6 +86,70 @@ line6";
 }
 
 #[test]
+fn test_regex_start_never_matches() {
+    use std::process::{Command, Stdio};
+
+    let input = "line1\nline2\nline3";
+    let mut child = Command::new("cargo")
+        .arg("run")
+        .arg("--")
+        .args(["-r", "foo:2"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute command");
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .expect("Failed to write to stdin");
+
+    let output = child.wait_with_output().expect("Failed to wait for child");
+
+    assert!(
+        output.status.success(),
+        "Process failed with stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).trim().is_empty());
+}
+
+#[test]
+fn test_start_index_greater_than_end() {
+    use std::process::{Command, Stdio};
+
+    let input = "line1\nline2\nline3\nline4";
+    let mut child = Command::new("cargo")
+        .arg("run")
+        .arg("--")
+        .args(["-r", "5:3"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute command");
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .expect("Failed to write to stdin");
+
+    let output = child.wait_with_output().expect("Failed to wait for child");
+
+    assert!(
+        output.status.success(),
+        "Process failed with stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).trim().is_empty());
+}
+
+#[test]
 fn test_column_selection() {
     let input = "col1 col2 col3
 data1 data2 data3";
@@ -131,7 +197,7 @@ python script
 rust program";
     let output = run_ock_with_stdin(input, vec!["-r", "python"]);
     // Regex "python" matches both lines containing "python"
-    assert!(output.contains("python"));  // Will match both lines
+    assert!(output.contains("python")); // Will match both lines
     assert!(!output.contains("java"));
     assert!(!output.contains("rust"));
     assert!(!output.contains("header"));
@@ -194,7 +260,7 @@ fn test_file_input() {
 file_line2
 file_line3";
     writeln!(temp_file, "{}", content).unwrap();
-    
+
     let file_path = temp_file.path().to_str().unwrap();
     let output = run_ock(vec!["-r", "2", file_path]);
     assert!(output.contains("file_line2"));
@@ -230,12 +296,12 @@ fn test_complex_regex_patterns() {
 123 john_doe
 456 jane_smith
 789 bob_jones";
-    
+
     // Test case-insensitive matching
     let output = run_ock_with_stdin(input, vec!["-r", "JANE"]);
     assert!(output.contains("jane_smith"));
     assert!(!output.contains("john_doe"));
-    
+
     // Test partial matching
     let output2 = run_ock_with_stdin(input, vec!["-c", "name"]);
     assert!(output2.contains("USER_NAME"));
@@ -252,7 +318,7 @@ data2
 data3
 END_MARKER
 extra_data";
-    
+
     let output = run_ock_with_stdin(input, vec!["-r", "start:end"]);
     assert!(output.contains("START_MARKER"));
     assert!(output.contains("data1"));
@@ -269,7 +335,7 @@ line2
 line3
 line4
 line5";
-    
+
     let output = run_ock_with_stdin(input, vec!["-r", "1,3,5"]);
     assert!(output.contains("line1"));
     assert!(!output.contains("line2"));
@@ -284,7 +350,7 @@ fn test_large_dataset() {
         .map(|i| format!("row{} col1 col2 col3", i))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     let output = run_ock_with_stdin(&input, vec!["-r", "10:20", "-c", "1,3"]);
     assert!(output.contains("row10"));
     assert!(output.contains("row20"));
@@ -305,7 +371,7 @@ fn test_empty_input() {
 fn test_whitespace_handling() {
     let input = "  col1   col2    col3  
   data1   data2    data3  ";
-    
+
     let output = run_ock_with_stdin(input, vec!["-c", "2"]);
     assert!(output.contains("col2"));
     assert!(output.contains("data2"));
@@ -315,7 +381,7 @@ fn test_whitespace_handling() {
 fn test_mixed_delimiters() {
     let input = "a b c,d e
 1 2 3,4 5";
-    
+
     // Should split on whitespace by default
     let output = run_ock_with_stdin(input, vec!["-c", "3"]);
     assert!(output.contains("c,d"));
@@ -326,7 +392,7 @@ fn test_mixed_delimiters() {
 fn test_unicode_support() {
     let input = "英文 中文 日本語
 hello 你好 こんにちは";
-    
+
     let output = run_ock_with_stdin(input, vec!["-c", "2"]);
     assert!(output.contains("中文"));
     assert!(output.contains("你好"));
@@ -336,7 +402,7 @@ hello 你好 こんにちは";
 fn test_special_characters() {
     let input = "col@1 col#2 col$3
 val!1 val%2 val^3";
-    
+
     let output = run_ock_with_stdin(input, vec!["-c", "2"]);
     assert!(output.contains("col#2"));
     assert!(output.contains("val%2"));
@@ -350,7 +416,7 @@ root         1   0.0   0.0  168936  11408 ?        Ss   Oct30   0:48 /sbin/init
 root        42   0.0   0.0   41796   3992 ?        S<s  Oct30   0:00 /lib/systemd/systemd-journald
 www-data   847   0.2   1.3  342456  52788 ?        S    Nov01  12:34 apache2 -k start
 mysql      923   0.5   3.2  892344 129876 ?        Ssl  Nov01  23:45 /usr/sbin/mysqld";
-    
+
     // Get PID and COMMAND columns
     let output = run_ock_with_stdin(input, vec!["-c", "pid,command"]);
     assert!(output.contains("PID"));
@@ -359,7 +425,7 @@ mysql      923   0.5   3.2  892344 129876 ?        Ssl  Nov01  23:45 /usr/sbin/m
     assert!(output.contains("/sbin/init"));
     assert!(output.contains("847"));
     assert!(output.contains("apache2"));
-    
+
     // Get processes containing "systemd"
     let output2 = run_ock_with_stdin(input, vec!["-r", "systemd"]);
     assert!(output2.contains("systemd-journald"));
@@ -367,13 +433,13 @@ mysql      923   0.5   3.2  892344 129876 ?        Ssl  Nov01  23:45 /usr/sbin/m
     assert!(!output2.contains("mysqld"));
 }
 
-#[test] 
+#[test]
 fn test_csv_processing() {
     let input = "Name,Age,City,Country
 John,25,NewYork,USA
 Jane,30,London,UK
 Bob,35,Tokyo,Japan";
-    
+
     // Select Age and Country columns
     let output = run_ock_with_stdin(input, vec!["-c", "2,4", "--column-delimiter", ","]);
     assert!(output.contains("Age"));
@@ -408,14 +474,14 @@ col3";
 fn test_out_of_bounds_indices() {
     let input = "a b c
 1 2 3";
-    
+
     // NOTE: Current behavior when requesting non-existent column 10 is to return
     // the entire row. This is questionable UX - might be better to return empty
     // or error. But this test documents CURRENT behavior accurately.
     let output = run_ock_with_stdin(input, vec!["-c", "10"]);
     assert!(output.contains("a b c"));
     assert!(output.contains("1 2 3"));
-    
+
     // Request row 10 (doesn't exist) - correctly returns empty
     let output2 = run_ock_with_stdin(input, vec!["-r", "10"]);
     assert_eq!(output2.trim(), "");

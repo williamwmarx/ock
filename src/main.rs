@@ -6,7 +6,7 @@ mod selector;
 include!("utils.rs");
 
 #[cfg_attr(test, allow(dead_code))]
-pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector::Selector) -> bool {
+pub fn item_in_sequence(item_idx: usize, item: &str, selector: &mut selector::Selector) -> bool {
     let mut in_sequence = false;
     if item_idx != selector.start_idx
         && selector.start_idx == selector.end_idx
@@ -14,7 +14,7 @@ pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector:
         && !utils::regex_is_default(&selector.start_regex)
     {
         // If a regex is provided as the only selector, just check against it
-        return selector.start_regex.is_match(item)
+        return selector.start_regex.is_match(item);
     }
     if (item_idx == selector.start_idx && utils::regex_is_default(&selector.start_regex))
         || selector.start_regex.is_match(item)
@@ -29,7 +29,12 @@ pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector:
             // Only one column selected
             selector.stopped = true;
         }
-    } else if item_idx == selector.end_idx || selector.end_regex.is_match(item) {
+    } else if selector.start_idx != usize::MAX
+        && ((item_idx == selector.end_idx
+            && item_idx >= selector.start_idx
+            && (item_idx - selector.start_idx) % selector.step == 0)
+            || selector.end_regex.is_match(item))
+    {
         // Sequence end
         in_sequence = true;
         selector.end_idx = item_idx;
@@ -46,11 +51,11 @@ pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector:
 /// Get vector of columns to use from header row
 #[cfg_attr(test, allow(dead_code))]
 pub fn get_columns(
-    index_row: &String,
-    column_selectors: &mut Vec<selector::Selector>,
-    column_delimiter: &String,
+    index_row: &str,
+    column_selectors: &mut [selector::Selector],
+    column_delimiter: &str,
 ) -> Vec<usize> {
-    if column_selectors.len() == 0 {
+    if column_selectors.is_empty() {
         // Return blank vector if no column selectors present
         Vec::new()
     } else {
@@ -72,16 +77,16 @@ pub fn get_columns(
 
 /// Grab cells in a row by a list of given indeces
 #[cfg_attr(test, allow(dead_code))]
-pub fn get_cells(row: &String, cells_to_select: &Vec<usize>, column_delimiter: &String) -> Vec<String> {
-    if cells_to_select.len() == 0 {
+pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -> Vec<String> {
+    if cells_to_select.is_empty() {
         // If no cells to select specified, return one element vector of the row
-        vec![(*row).clone()]
+        vec![row.to_string()]
     } else {
         // Iterate through cells in row and push ones with matching indeces to output vector
         let mut output: Vec<String> = Vec::new();
         for (cell_idx, cell) in utils::split(row, column_delimiter).iter().enumerate() {
             if cells_to_select.contains(&cell_idx) {
-                output.push((*cell).clone());
+                output.push(cell.clone());
             }
         }
         output
@@ -114,7 +119,7 @@ fn main() {
 
     // Iterate through results and find max length of each column for pretty printing
     if output.is_empty() {
-        return;  // No output to print
+        return; // No output to print
     }
     let mut max_column_lengths: Vec<usize> = output[0].iter().map(|s| s.len()).collect();
     for row in &output {

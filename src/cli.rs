@@ -9,7 +9,7 @@ use std::path::Path;
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     /// Rows to select from input
-    #[arg(short, long, allow_negative_numbers = true, default_value="")]
+    #[arg(short, long, allow_negative_numbers = true, default_value = "")]
     pub rows: String,
 
     /// Row delimiter
@@ -17,7 +17,7 @@ pub struct Args {
     pub row_delimiter: String,
 
     /// Columns to select from input
-    #[arg(short, long, allow_negative_numbers = true, default_value="")]
+    #[arg(short, long, allow_negative_numbers = true, default_value = "")]
     pub columns: String,
 
     /// Column delimiter
@@ -40,8 +40,8 @@ fn read_stdin() -> String {
 }
 
 /// Parse input, allowing file, piped text, or text as an argument
-pub fn parse_input(input_text: &String) -> String {
-    if input_text == "" {
+pub fn parse_input(input_text: &str) -> String {
+    if input_text.is_empty() {
         // If not input passed, read stdin (i.e. input from pipe)
         read_stdin()
     } else if Path::new(input_text).exists() {
@@ -49,7 +49,7 @@ pub fn parse_input(input_text: &String) -> String {
         fs::read_to_string(input_text).expect("Input file could not be read.")
     } else {
         // If input string is present and not file, use it as input args.input
-        input_text.clone()
+        input_text.to_string()
     }
 }
 
