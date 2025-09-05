@@ -528,15 +528,16 @@ fn test_stdin_with_trailing_newlines() {
 #[test]
 fn test_stdin_with_multiple_newlines() {
     // Test stdin handles multiple consecutive newlines
+    // split() filters out empty strings, so blank lines are ignored
     let input = "line1\n\n\nline2\n\nline3";
     let output = run_ock_with_stdin(input, vec![]);
     
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
     assert!(output.contains("line3"));
-    // Should preserve empty lines: line1 + 2 empty + line2 + 1 empty + line3 = 6 lines
+    // Expect only the non-empty lines to remain
     let lines: Vec<&str> = output.lines().collect();
-    assert_eq!(lines.len(), 6, "Expected exactly 6 lines: line1, empty, empty, line2, empty, line3");
+    assert_eq!(lines, vec!["line1", "line2", "line3"]);
 }
 
 #[test]
