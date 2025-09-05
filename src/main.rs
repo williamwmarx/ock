@@ -90,10 +90,8 @@ pub fn get_columns_with_match_info(
     original_selectors_str: &str,
 ) -> Result<(Vec<usize>, Vec<String>), SelectorError> {
     if column_selectors.is_empty() {
-        // When no column selectors provided, return all column indices
-        let columns = utils::split(index_row, column_delimiter)?;
-        let all_indices: Vec<usize> = (0..columns.len()).collect();
-        return Ok((all_indices, Vec::new()));
+        // Return empty vector when no column selectors provided (consistent with get_columns)
+        return Ok((Vec::new(), Vec::new()));
     }
 
     let mut export_column_idxs: Vec<usize> = Vec::new();
