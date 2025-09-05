@@ -78,19 +78,24 @@ pub fn get_columns(
     }
 }
 
-/// Grab cells in a row by a list of given indices
+/// Grab cells in a row by a list of given indices.
 ///
-/// Returns the entire row when `cells_to_select` is empty. If indices are
-/// provided but none match, an empty vector is returned.
+/// When `cells_to_select` is empty, the entire row is returned only if
+/// `select_full_row` is `true` (i.e., the caller provided no column selectors).
+/// If indices are provided but none match, an empty vector is returned.
 #[cfg_attr(test, allow(dead_code))]
 pub fn get_cells(
     row: &str,
     cells_to_select: &[usize],
     column_delimiter: &str,
+    select_full_row: bool,
 ) -> Result<Vec<String>, SelectorError> {
     if cells_to_select.is_empty() {
-        // If no cells to select specified, return the entire row
-        Ok(vec![row.to_string()])
+        if select_full_row {
+            Ok(vec![row.to_string()])
+        } else {
+            Ok(Vec::new())
+        }
     } else {
         // Iterate through cells in row and push ones with matching indices to output vector
         let mut output: Vec<String> = Vec::new();
@@ -142,6 +147,7 @@ fn main() {
     // Parse arguments
     let args = cli::Args::parse();
     let input = cli::parse_input(&args.input);
+    let select_full_row = args.columns.is_empty();
 
     // Parse selectors
     let mut row_selectors = match selector::parse_selectors(&args.rows) {
@@ -181,13 +187,14 @@ fn main() {
         }
         for row_selector in row_selectors.iter_mut() {
             if item_in_sequence(row_idx, row, row_selector) {
-                let cells = match get_cells(row, &export_cols, &args.column_delimiter) {
-                    Ok(cells) => cells,
-                    Err(e) => {
-                        eprintln!("Error: {}", e);
-                        process::exit(1);
-                    }
-                };
+                let cells =
+                    match get_cells(row, &export_cols, &args.column_delimiter, select_full_row) {
+                        Ok(cells) => cells,
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            process::exit(1);
+                        }
+                    };
                 output.push(cells);
             }
         }

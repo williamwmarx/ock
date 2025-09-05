@@ -190,7 +190,7 @@ mod tests {
         let cells_to_select: Vec<usize> = Vec::new();
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, true).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "cell1 cell2 cell3");
     }
@@ -201,7 +201,7 @@ mod tests {
         let cells_to_select = vec![1];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "cell2");
     }
@@ -212,7 +212,7 @@ mod tests {
         let cells_to_select = vec![0, 2, 3];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "cell1");
         assert_eq!(result[1], "cell3");
@@ -225,7 +225,7 @@ mod tests {
         let cells_to_select = vec![3, 1, 0];
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], "A");
         assert_eq!(result[1], "B");
@@ -238,7 +238,7 @@ mod tests {
         let cells_to_select = vec![1, 3];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "b");
         assert_eq!(result[1], "d");
@@ -250,7 +250,7 @@ mod tests {
         let cells_to_select = vec![0, 2];
         let delimiter = String::from(r"\t");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "field1");
         assert_eq!(result[1], "field3");
@@ -262,7 +262,7 @@ mod tests {
         let cells_to_select = vec![0, 1];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "a");
         assert_eq!(result[1], "c"); // Empty cell is filtered out
@@ -274,7 +274,7 @@ mod tests {
         let cells_to_select = vec![0, 5, 10]; // Indices beyond the row length
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "a"); // Only the valid index is included
     }
@@ -285,7 +285,7 @@ mod tests {
         let cells_to_select = vec![5, 10, 15]; // All indices beyond the row length
         let delimiter = String::from(r"\s");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 0);
     }
 
@@ -295,7 +295,7 @@ mod tests {
         let cells_to_select = vec![0, 2];
         let delimiter = String::from(",");
 
-        let result = get_cells(&row, &cells_to_select, &delimiter).unwrap();
+        let result = get_cells(&row, &cells_to_select, &delimiter, false).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], "hello world");
         assert_eq!(result[1], "baz qux");
