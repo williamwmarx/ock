@@ -1,30 +1,41 @@
+use lru::LruCache;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::collections::HashMap;
 use std::fmt;
+use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 include!("utils.rs");
 
 /// Global cache for compiled regex patterns to avoid recompilation.
 ///
-/// Cached patterns are never evicted; in long-running processes with many
-/// unique patterns this may lead to increased memory usage.
-pub(crate) static REGEX_CACHE: Lazy<Mutex<HashMap<String, Arc<Regex>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+/// Cache size is limited to `REGEX_CACHE_CAPACITY` entries using an LRU policy
+/// to bound memory usage.
+const REGEX_CACHE_CAPACITY: usize = 128;
+pub(crate) static REGEX_CACHE: Lazy<Mutex<LruCache<String, Arc<Regex>>>> = Lazy::new(|| {
+    let cap = NonZeroUsize::new(REGEX_CACHE_CAPACITY).unwrap();
+    Mutex::new(LruCache::new(cap))
+});
 
 /// Get or compile a regex pattern, using a global cache for performance.
 ///
 /// Mutex poisoning is ignored by taking ownership of the inner value,
 /// allowing continued use of the existing cache.
 pub(crate) fn get_or_compile_regex(pattern: &str) -> Result<Arc<Regex>, regex::Error> {
+    {
+        let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(regex) = cache.get(pattern) {
+            return Ok(regex.clone());
+        }
+    }
+
+    let compiled = Arc::new(Regex::new(pattern)?);
+
     let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(regex) = cache.get(pattern) {
         return Ok(regex.clone());
     }
-    let regex = Regex::new(pattern)?;
-    let arc = Arc::new(regex);
-    cache.insert(pattern.to_string(), arc.clone());
-    Ok(arc)
+    cache.put(pattern.to_string(), compiled.clone());
+    Ok(compiled)
 }
 
 #[derive(Debug)]

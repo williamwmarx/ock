@@ -285,7 +285,7 @@ mod tests {
         let r2 = get_or_compile_regex("foo_cache_test").unwrap();
         assert!(Arc::ptr_eq(&r1, &r2));
         let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        assert!(cache.contains_key("foo_cache_test"));
+        assert!(cache.contains("foo_cache_test"));
     }
 
     #[test]
@@ -302,6 +302,6 @@ mod tests {
             assert!(Arc::ptr_eq(&results[0], r));
         }
         let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        assert!(cache.contains_key("thread_safe_test"));
+        assert!(cache.contains("thread_safe_test"));
     }
 }
