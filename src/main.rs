@@ -8,41 +8,44 @@ use selector::SelectorError;
 include!("utils.rs");
 
 #[cfg_attr(test, allow(dead_code))]
-pub fn item_in_sequence(item_idx: usize, item: &str, selector: &mut selector::Selector) -> bool {
+pub fn item_in_sequence(item_idx: usize, item: &str, selector: &mut selector::Selector, collection_length: usize) -> bool {
+    // Resolve indices if not already done
+    selector.resolve_indices(collection_length);
+
     let mut in_sequence = false;
-    if item_idx != selector.start_idx
-        && selector.start_idx == selector.end_idx
+    if item_idx != selector.resolved_start_idx
+        && selector.resolved_start_idx == selector.resolved_end_idx
         && utils::regex_eq(&selector.start_regex, &selector.end_regex)
         && !utils::regex_is_default(&selector.start_regex)
     {
         // If a regex is provided as the only selector, just check against it
         return selector.start_regex.is_match(item);
     }
-    if (item_idx == selector.start_idx && utils::regex_is_default(&selector.start_regex))
+    if (item_idx == selector.resolved_start_idx && utils::regex_is_default(&selector.start_regex))
         || selector.start_regex.is_match(item)
     {
         // Sequence started
         in_sequence = true;
-        selector.start_idx = item_idx;
+        selector.resolved_start_idx = item_idx;
         if (utils::regex_eq(&selector.end_regex, &selector.start_regex)
             && !utils::regex_is_default(&selector.start_regex))
-            || (selector.end_idx == selector.start_idx)
+            || (selector.resolved_end_idx == selector.resolved_start_idx)
         {
             // Only one column selected
             selector.stopped = true;
         }
-    } else if selector.start_idx != usize::MAX
-        && ((item_idx == selector.end_idx
-            && item_idx >= selector.start_idx
-            && item_idx.saturating_sub(selector.start_idx) % selector.step == 0)
+    } else if selector.resolved_start_idx != usize::MAX
+        && ((item_idx == selector.resolved_end_idx
+            && item_idx >= selector.resolved_start_idx
+            && item_idx.saturating_sub(selector.resolved_start_idx) % selector.step == 0)
             || selector.end_regex.is_match(item))
     {
         // Sequence end
         in_sequence = true;
-        selector.end_idx = item_idx;
-    } else if item_idx > selector.start_idx
-        && item_idx < selector.end_idx
-        && item_idx.saturating_sub(selector.start_idx) % selector.step == 0
+        selector.resolved_end_idx = item_idx;
+    } else if item_idx > selector.resolved_start_idx
+        && item_idx < selector.resolved_end_idx
+        && item_idx.saturating_sub(selector.resolved_start_idx) % selector.step == 0
     {
         // Sequence middle
         in_sequence = true;
@@ -68,7 +71,7 @@ pub fn get_columns(
         for (col_idx, column) in columns.iter().enumerate() {
             // Iterate through selector in vector of selectors
             for column_selector in column_selectors.iter_mut() {
-                if item_in_sequence(col_idx, column, column_selector) {
+                if item_in_sequence(col_idx, column, column_selector, columns.len()) {
                     export_column_idxs.push(col_idx);
                 }
             }
@@ -173,7 +176,7 @@ fn main() {
             };
         }
         for row_selector in row_selectors.iter_mut() {
-            if item_in_sequence(row_idx, row, row_selector) {
+            if item_in_sequence(row_idx, row, row_selector, split_rows.len()) {
                 let cells = match get_cells(row, &export_cols, &args.column_delimiter) {
                     Ok(cells) => cells,
                     Err(e) => {

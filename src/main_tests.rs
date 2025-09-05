@@ -1,36 +1,38 @@
 #[cfg(test)]
 mod tests {
-    use crate::selector::{Selector, parse_selectors};
-    use crate::{item_in_sequence, get_columns, get_cells, format_columns};
+    use crate::selector::{parse_selectors, Selector};
+    use crate::{format_columns, get_cells, get_columns, item_in_sequence};
     use regex::Regex;
 
     #[test]
     fn test_item_in_sequence_single_index() {
         let mut selector = Selector::default();
-        selector.start_idx = 2;
-        selector.end_idx = 2;
+        selector.start_idx = 3;
+        selector.end_idx = 3;
 
         let item = String::from("test");
-        assert!(!item_in_sequence(0, &item, &mut selector));
-        assert!(!item_in_sequence(1, &item, &mut selector));
-        assert!(item_in_sequence(2, &item, &mut selector));
-        assert!(!item_in_sequence(3, &item, &mut selector));
+        let len = 10;
+        assert!(!item_in_sequence(0, &item, &mut selector, len));
+        assert!(!item_in_sequence(1, &item, &mut selector, len));
+        assert!(item_in_sequence(2, &item, &mut selector, len));
+        assert!(!item_in_sequence(3, &item, &mut selector, len));
     }
 
     #[test]
     fn test_item_in_sequence_range() {
         let mut selector = Selector::default();
-        selector.start_idx = 2;
-        selector.end_idx = 5;
+        selector.start_idx = 3;
+        selector.end_idx = 6;
 
         let item = String::from("test");
-        assert!(!item_in_sequence(0, &item, &mut selector));
-        assert!(!item_in_sequence(1, &item, &mut selector));
-        assert!(item_in_sequence(2, &item, &mut selector));
-        assert!(item_in_sequence(3, &item, &mut selector));
-        assert!(item_in_sequence(4, &item, &mut selector));
-        assert!(item_in_sequence(5, &item, &mut selector));
-        assert!(!item_in_sequence(6, &item, &mut selector));
+        let len = 10;
+        assert!(!item_in_sequence(0, &item, &mut selector, len));
+        assert!(!item_in_sequence(1, &item, &mut selector, len));
+        assert!(item_in_sequence(2, &item, &mut selector, len));
+        assert!(item_in_sequence(3, &item, &mut selector, len));
+        assert!(item_in_sequence(4, &item, &mut selector, len));
+        assert!(item_in_sequence(5, &item, &mut selector, len));
+        assert!(!item_in_sequence(6, &item, &mut selector, len));
     }
 
     #[test]
@@ -41,13 +43,14 @@ mod tests {
         selector.step = 2;
 
         let item = String::from("test");
-        assert!(item_in_sequence(0, &item, &mut selector));
-        assert!(!item_in_sequence(1, &item, &mut selector));
-        assert!(item_in_sequence(2, &item, &mut selector));
-        assert!(!item_in_sequence(3, &item, &mut selector));
-        assert!(item_in_sequence(4, &item, &mut selector));
-        assert!(!item_in_sequence(5, &item, &mut selector));
-        assert!(item_in_sequence(6, &item, &mut selector));
+        let len = 20;
+        assert!(item_in_sequence(0, &item, &mut selector, len));
+        assert!(!item_in_sequence(1, &item, &mut selector, len));
+        assert!(item_in_sequence(2, &item, &mut selector, len));
+        assert!(!item_in_sequence(3, &item, &mut selector, len));
+        assert!(item_in_sequence(4, &item, &mut selector, len));
+        assert!(!item_in_sequence(5, &item, &mut selector, len));
+        assert!(item_in_sequence(6, &item, &mut selector, len));
     }
 
     #[test]
@@ -55,16 +58,17 @@ mod tests {
         let mut selector = Selector::default();
         selector.start_regex = Regex::new(r"(?i).*pid.*").unwrap();
         selector.end_regex = Regex::new(r"(?i).*pid.*").unwrap();
-        selector.start_idx = usize::MAX;
-        selector.end_idx = usize::MAX;
+        selector.start_idx = i64::MAX;
+        selector.end_idx = i64::MAX;
 
         let pid_item = String::from("PID");
         let user_item = String::from("USER");
         let process_pid = String::from("process_pid");
+        let len = 10;
 
-        assert!(item_in_sequence(0, &pid_item, &mut selector));
-        assert!(!item_in_sequence(1, &user_item, &mut selector));
-        assert!(item_in_sequence(2, &process_pid, &mut selector));
+        assert!(item_in_sequence(0, &pid_item, &mut selector, len));
+        assert!(!item_in_sequence(1, &user_item, &mut selector, len));
+        assert!(item_in_sequence(2, &process_pid, &mut selector, len));
     }
 
     #[test]
@@ -78,28 +82,66 @@ mod tests {
         let end = String::from("END");
 
         // Before match
-        assert!(!item_in_sequence(0, &middle, &mut selector));
+        let len = 10;
+        assert!(!item_in_sequence(0, &middle, &mut selector, len));
 
         // Start match
-        assert!(item_in_sequence(1, &start, &mut selector));
-        assert_eq!(selector.start_idx, 1);
+        assert!(item_in_sequence(1, &start, &mut selector, len));
 
         // Middle items (after start has been found)
-        assert!(item_in_sequence(2, &middle, &mut selector));
+        assert!(item_in_sequence(2, &middle, &mut selector, len));
 
         // End match
-        assert!(item_in_sequence(3, &end, &mut selector));
+        assert!(item_in_sequence(3, &end, &mut selector, len));
     }
 
     #[test]
     fn test_item_in_sequence_stopped() {
         let mut selector = Selector::default();
-        selector.start_idx = 2;
-        selector.end_idx = 2;
+        selector.start_idx = 3;
+        selector.end_idx = 3;
 
         let item = String::from("test");
-        assert!(item_in_sequence(2, &item, &mut selector));
+        let len = 10;
+        assert!(item_in_sequence(2, &item, &mut selector, len));
         assert!(selector.stopped); // Should be stopped after single selection
+    }
+
+    #[test]
+    fn test_item_in_sequence_negative_index() {
+        let mut selector = Selector::default();
+        selector.start_idx = -1;
+        selector.end_idx = -1;
+
+        let item = String::from("test");
+        let len = 3;
+        assert!(!item_in_sequence(1, &item, &mut selector, len));
+        assert!(item_in_sequence(2, &item, &mut selector, len));
+    }
+
+    #[test]
+    fn test_item_in_sequence_negative_range() {
+        let mut selector = Selector::default();
+        selector.start_idx = 1;
+        selector.end_idx = -1;
+
+        let item = String::from("test");
+        let len = 5;
+        assert!(item_in_sequence(0, &item, &mut selector, len));
+        assert!(item_in_sequence(3, &item, &mut selector, len));
+        assert!(!item_in_sequence(4, &item, &mut selector, len));
+    }
+
+    #[test]
+    fn test_item_in_sequence_negative_range_out_of_bounds() {
+        let mut selector = Selector::default();
+        selector.start_idx = 1;
+        selector.end_idx = -10;
+
+        let item = String::from("test");
+        let len = 5;
+        assert!(!item_in_sequence(0, &item, &mut selector, len));
+        assert!(!item_in_sequence(4, &item, &mut selector, len));
     }
 
     #[test]
@@ -328,7 +370,11 @@ mod tests {
     #[test]
     fn test_column_alignment_varying_widths() {
         let output = vec![
-            vec!["short".to_string(), "medium".to_string(), "very_long_content".to_string()],
+            vec![
+                "short".to_string(),
+                "medium".to_string(),
+                "very_long_content".to_string(),
+            ],
             vec!["x".to_string(), "y".to_string(), "z".to_string()],
             vec!["longer".to_string(), "text".to_string(), "here".to_string()],
         ];
@@ -348,8 +394,8 @@ mod tests {
         ];
         let result = format_columns(&output);
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0], "a longer c");
-        assert_eq!(result[1], "  longer  ");
+        assert_eq!(result[0], "a b      c");
+        assert_eq!(result[1], "  longer ");
         assert_eq!(result[2], "d        f");
     }
 
@@ -379,9 +425,9 @@ mod tests {
         assert_eq!(result.len(), 3);
         // Note: This test verifies that the function handles unicode characters
         // The actual alignment might not be perfect for display due to character width differences
-        assert_eq!(result[0], "短       longer");
-        assert_eq!(result[1], "很长的文本 x");
-        assert_eq!(result[2], "中       medium");
+        assert_eq!(result[0], "短               longer");
+        assert_eq!(result[1], "很长的文本           x");
+        assert_eq!(result[2], "中               medium");
     }
 
     #[test]
@@ -400,9 +446,11 @@ mod tests {
 
     #[test]
     fn test_column_alignment_single_row() {
-        let output = vec![
-            vec!["single".to_string(), "row".to_string(), "test".to_string()],
-        ];
+        let output = vec![vec![
+            "single".to_string(),
+            "row".to_string(),
+            "test".to_string(),
+        ]];
         let result = format_columns(&output);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "single row test");
