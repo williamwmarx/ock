@@ -1,6 +1,25 @@
 use regex::Regex;
 use std::fmt;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
 include!("utils.rs");
+
+// Global cache for compiled regex patterns to avoid recompilation
+static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> = Lazy::new(|| {
+    Mutex::new(HashMap::new())
+});
+
+/// Get or compile a regex pattern, using a global cache for performance
+fn get_or_compile_regex(pattern: &str) -> Result<Regex, regex::Error> {
+    let mut cache = REGEX_CACHE.lock().unwrap();
+    if let Some(regex) = cache.get(pattern) {
+        return Ok(regex.clone());
+    }
+    let regex = Regex::new(pattern)?;
+    cache.insert(pattern.to_string(), regex.clone());
+    Ok(regex)
+}
 
 #[derive(Debug)]
 pub enum SelectorError {
@@ -76,11 +95,11 @@ impl Selector {
     /// This should never fail in practice since we use a known-good regex pattern.
     pub fn new() -> Result<Selector, SelectorError> {
         let default_regex = r".^";
-        let start_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
+        let start_regex = get_or_compile_regex(default_regex).map_err(|e| SelectorError::InvalidRegex {
             pattern: default_regex.to_string(),
             source: e,
         })?;
-        let end_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
+        let end_regex = get_or_compile_regex(default_regex).map_err(|e| SelectorError::InvalidRegex {
             pattern: default_regex.to_string(),
             source: e,
         })?;
@@ -288,7 +307,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                     match idx {
                         0 => {
                             sequence.start_regex =
-                                Regex::new(&case_insensitive_regex).map_err(|e| {
+                                get_or_compile_regex(&case_insensitive_regex).map_err(|e| {
                                     SelectorError::InvalidRegex {
                                         pattern: case_insensitive_regex.clone(),
                                         source: e,
@@ -299,7 +318,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
                                 sequence.end_regex =
-                                    Regex::new(&case_insensitive_regex).map_err(|e| {
+                                    get_or_compile_regex(&case_insensitive_regex).map_err(|e| {
                                         SelectorError::InvalidRegex {
                                             pattern: case_insensitive_regex,
                                             source: e,
@@ -309,7 +328,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                         }
                         1 => {
                             sequence.end_regex =
-                                Regex::new(&case_insensitive_regex).map_err(|e| {
+                                get_or_compile_regex(&case_insensitive_regex).map_err(|e| {
                                     SelectorError::InvalidRegex {
                                         pattern: case_insensitive_regex,
                                         source: e,
