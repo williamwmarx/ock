@@ -153,7 +153,7 @@ mod tests {
     fn test_parse_selectors_non_integer_step() {
         let result = parse_selectors(&String::from("1:10:abc"));
         assert!(result.is_err());
-        let error_msg = result.unwrap_err();
+        let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Step size must be an integer"));
     }
 
@@ -161,7 +161,7 @@ mod tests {
     fn test_parse_selectors_too_many_components() {
         let result = parse_selectors(&String::from("1:2:3:4"));
         assert!(result.is_err());
-        let error_msg = result.unwrap_err();
+        let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("A selector cannot be more than three components long"));
     }
 
@@ -190,7 +190,7 @@ mod tests {
     fn test_parse_selectors_step_zero_error() {
         let result = parse_selectors(&String::from("1:10:0"));
         assert!(result.is_err());
-        let error_msg = result.unwrap_err();
+        let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("step size cannot be zero"));
         assert!(error_msg.contains("1:10:0"));
     }
