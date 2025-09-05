@@ -33,14 +33,20 @@ impl std::error::Error for SelectorError {
 /// Keep track of user column and row selections
 #[derive(Debug)]
 pub struct Selector {
-    /// Index of first row to grab (start of range)
-    pub start_idx: usize,
+    /// Index of first row to grab (start of range) - can be negative for Python-style indexing
+    pub start_idx: i32,
+
+    /// Resolved start index (converted from negative to positive if needed)
+    pub resolved_start_idx: usize,
 
     /// Regex of first to grab (start of range)
     pub start_regex: regex::Regex,
 
-    /// Index of last row to grab (end of range)
-    pub end_idx: usize,
+    /// Index of last row to grab (end of range) - can be negative for Python-style indexing
+    pub end_idx: i32,
+
+    /// Resolved end index (converted from negative to positive if needed)
+    pub resolved_end_idx: usize,
 
     /// Regex of last row to grab (end of range)
     pub end_regex: regex::Regex,
@@ -50,6 +56,9 @@ pub struct Selector {
 
     /// Keep track of when to stop adding rows from range to output
     pub stopped: bool,
+
+    /// Track if indices have been resolved for a given collection length
+    pub indices_resolved: bool,
 }
 
 impl Selector {
@@ -74,12 +83,70 @@ impl Selector {
             
         Ok(Selector {
             start_idx: 0,
+            resolved_start_idx: 0,
             start_regex,
-            end_idx: usize::MAX,
+            end_idx: i32::MAX,
+            resolved_end_idx: usize::MAX,
             end_regex,
             step: 1,
             stopped: false,
+            indices_resolved: false,
         })
+    }
+
+    /// Resolve negative indices based on collection length (Python-style indexing)
+    /// 
+    /// # Arguments
+    /// 
+    /// * `collection_length` - The length of the collection being indexed
+    /// 
+    /// # Examples
+    /// 
+    /// * `-1` with length 5 becomes index 4 (last item)
+    /// * `-2` with length 5 becomes index 3 (second to last)
+    pub fn resolve_indices(&mut self, collection_length: usize) {
+        if self.indices_resolved {
+            return;
+        }
+
+        // Resolve start index
+        self.resolved_start_idx = if self.start_idx < 0 {
+            let abs_idx = (-self.start_idx) as usize;
+            if abs_idx > collection_length {
+                0 // Out of bounds negative index, clamp to start
+            } else {
+                collection_length - abs_idx
+            }
+        } else if self.start_idx == i32::MAX {
+            usize::MAX // Keep as usize::MAX for regex-based selection
+        } else if self.start_idx == 0 {
+            0 // Handle the special case of 0 (keep as 0, don't convert)
+        } else {
+            (self.start_idx - 1) as usize // Convert 1-based to 0-based for positive indices
+        };
+
+        // Resolve end index  
+        self.resolved_end_idx = if self.end_idx < 0 {
+            let abs_idx = (-self.end_idx) as usize;
+            if abs_idx > collection_length {
+                0 // Out of bounds negative index, clamp to start
+            } else {
+                collection_length - abs_idx
+            }
+        } else if self.end_idx == i32::MAX {
+            usize::MAX // Keep as usize::MAX for regex-based or unlimited selection
+        } else if self.end_idx == 0 {
+            0 // Handle the special case of 0 (keep as 0, don't convert)
+        } else {
+            (self.end_idx - 1) as usize // Convert 1-based to 0-based for positive indices
+        };
+
+        self.indices_resolved = true;
+    }
+
+    /// Reset resolution state - call when reusing selector for new collection
+    pub fn reset_resolution(&mut self) {
+        self.indices_resolved = false;
     }
 }
 
@@ -102,11 +169,14 @@ impl PartialEq for Selector {
     /// PartialEq implemented by default.
     fn eq(&self, other: &Self) -> bool {
         self.start_idx == other.start_idx
+            && self.resolved_start_idx == other.resolved_start_idx
             && utils::regex_eq(&self.start_regex, &other.start_regex)
             && self.end_idx == other.end_idx
+            && self.resolved_end_idx == other.resolved_end_idx
             && utils::regex_eq(&self.end_regex, &other.end_regex)
             && self.step == other.step
             && self.stopped == other.stopped
+            && self.indices_resolved == other.indices_resolved
     }
 }
 
@@ -130,33 +200,32 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
             // Try to parse int from component. If we're successful, use that int as a start index,
             // end index, or step. If parse() returns an error, use that component as a regex
             // pattern to match to
-            let parsed_component = component.parse::<usize>();
+            let parsed_component = component.parse::<i32>();
             match parsed_component {
                 Ok(_ok) => {
                     let raw_number = parsed_component.as_ref().unwrap();
                     match idx {
                         0 => {
-                            // Subtract 1 from start index for 1-based to 0-based conversion
-                            sequence.start_idx = raw_number - 1;
+                            // Store raw signed number - will be resolved later with collection length
+                            sequence.start_idx = *raw_number;
                             // If this is the full selection, set this to the end index as well
                             if selector.matches(":").count() == 0 {
-                                sequence.end_idx = raw_number - 1;
+                                sequence.end_idx = *raw_number;
                             }
                         }
                         1 => {
-                            // Subtract 1 from end index for 1-based to 0-based conversion
-                            sequence.end_idx = raw_number - 1;
+                            // Store raw signed number - will be resolved later with collection length
+                            sequence.end_idx = *raw_number;
                         }
                         2 => {
-                            // Step value should NOT be decremented - use raw value
-                            // Prevent division by zero by rejecting step=0
-                            if *raw_number == 0 {
+                            // Step value should NOT be negative and must be positive
+                            if *raw_number <= 0 {
                                 return Err(SelectorError::InvalidSelector {
                                     selector: selector.to_string(),
-                                    reason: "step size cannot be zero. Use step=1 to select every item in the range.".to_string(),
+                                    reason: "step size must be a positive integer greater than zero.".to_string(),
                                 });
                             }
-                            sequence.step = *raw_number;
+                            sequence.step = *raw_number as usize;
                         }
                         _ => return Err(SelectorError::InvalidSelector {
                             selector: selector.to_string(),
@@ -173,8 +242,8 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                                     pattern: case_insensitive_regex.clone(), 
                                     source: e 
                                 })?;
-                            // Set the start index to the usize max to ensure it doesn't interfere
-                            sequence.start_idx = usize::MAX;
+                            // Set the start index to the i32 max to ensure it doesn't interfere
+                            sequence.start_idx = i32::MAX;
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
                                 sequence.end_regex = Regex::new(&case_insensitive_regex)
