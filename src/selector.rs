@@ -4,8 +4,14 @@ include!("utils.rs");
 
 #[derive(Debug)]
 pub enum SelectorError {
-    InvalidRegex { pattern: String, source: regex::Error },
-    InvalidSelector { selector: String, reason: String },
+    InvalidRegex {
+        pattern: String,
+        source: regex::Error,
+    },
+    InvalidSelector {
+        selector: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for SelectorError {
@@ -63,24 +69,22 @@ pub struct Selector {
 
 impl Selector {
     /// Create a new default selector
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns `Ok(Selector)` with default values or `Err(SelectorError)` if the default regex cannot be compiled.
     /// This should never fail in practice since we use a known-good regex pattern.
     pub fn new() -> Result<Selector, SelectorError> {
         let default_regex = r".^";
-        let start_regex = Regex::new(default_regex)
-            .map_err(|e| SelectorError::InvalidRegex { 
-                pattern: default_regex.to_string(), 
-                source: e 
-            })?;
-        let end_regex = Regex::new(default_regex)
-            .map_err(|e| SelectorError::InvalidRegex { 
-                pattern: default_regex.to_string(), 
-                source: e 
-            })?;
-            
+        let start_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
+            pattern: default_regex.to_string(),
+            source: e,
+        })?;
+        let end_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
+            pattern: default_regex.to_string(),
+            source: e,
+        })?;
+
         Ok(Selector {
             start_idx: 0,
             resolved_start_idx: 0,
@@ -95,15 +99,18 @@ impl Selector {
     }
 
     /// Resolve negative indices based on collection length (Python-style indexing)
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `collection_length` - The length of the collection being indexed
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// * `-1` with length 5 becomes index 4 (last item)
     /// * `-2` with length 5 becomes index 3 (second to last)
+    ///
+    /// Negative end indices are treated as exclusive bounds, so an end index of
+    /// `-1` with length 5 resolves to `3`, excluding the last item.
     pub fn resolve_indices(&mut self, collection_length: usize) {
         if self.indices_resolved {
             return;
@@ -115,7 +122,7 @@ impl Selector {
             if abs_idx > collection_length {
                 0 // Out of bounds negative index, clamp to start
             } else {
-                collection_length - abs_idx
+                collection_length.saturating_sub(abs_idx)
             }
         } else if self.start_idx == i32::MAX {
             usize::MAX // Keep as usize::MAX for regex-based selection
@@ -125,13 +132,18 @@ impl Selector {
             (self.start_idx - 1) as usize // Convert 1-based to 0-based for positive indices
         };
 
-        // Resolve end index  
+        // Resolve end index
         self.resolved_end_idx = if self.end_idx < 0 {
             let abs_idx = (-self.end_idx) as usize;
             if abs_idx > collection_length {
                 0 // Out of bounds negative index, clamp to start
             } else {
-                collection_length - abs_idx
+                let idx = collection_length.saturating_sub(abs_idx);
+                if self.start_idx != self.end_idx {
+                    idx.saturating_sub(1)
+                } else {
+                    idx
+                }
             }
         } else if self.end_idx == i32::MAX {
             usize::MAX // Keep as usize::MAX for regex-based or unlimited selection
@@ -152,9 +164,9 @@ impl Selector {
 
 impl Default for Selector {
     /// Defaults to implement a new selector without defining each field individually
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// This will panic if the default regex pattern fails to compile, which should never happen.
     /// For error handling, use `Selector::new()` instead.
     fn default() -> Selector {
@@ -182,9 +194,9 @@ impl PartialEq for Selector {
 
 /// Parse either row or column selectors, turning Python-like list slicing syntax into vector of
 /// Selector structs
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns `SelectorError::InvalidRegex` if any regex pattern fails to compile.
 pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> {
     let mut sequences: Vec<Selector> = Vec::new();
@@ -222,50 +234,68 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                             if *raw_number <= 0 {
                                 return Err(SelectorError::InvalidSelector {
                                     selector: selector.to_string(),
-                                    reason: "step size must be a positive integer greater than zero.".to_string(),
+                                    reason:
+                                        "step size must be a positive integer greater than zero."
+                                            .to_string(),
                                 });
                             }
                             sequence.step = *raw_number as usize;
                         }
-                        _ => return Err(SelectorError::InvalidSelector {
-                            selector: selector.to_string(),
-                            reason: "A selector cannot be more than three components long".to_string(),
-                        }),
+                        _ => {
+                            return Err(SelectorError::InvalidSelector {
+                                selector: selector.to_string(),
+                                reason: "A selector cannot be more than three components long"
+                                    .to_string(),
+                            })
+                        }
                     }
                 }
                 Err(_e) => {
                     let case_insensitive_regex = format!(r"(?i).*{}.*", &component);
                     match idx {
                         0 => {
-                            sequence.start_regex = Regex::new(&case_insensitive_regex)
-                                .map_err(|e| SelectorError::InvalidRegex { 
-                                    pattern: case_insensitive_regex.clone(), 
-                                    source: e 
+                            sequence.start_regex =
+                                Regex::new(&case_insensitive_regex).map_err(|e| {
+                                    SelectorError::InvalidRegex {
+                                        pattern: case_insensitive_regex.clone(),
+                                        source: e,
+                                    }
                                 })?;
                             // Set the start index to the i32 max to ensure it doesn't interfere
                             sequence.start_idx = i32::MAX;
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
-                                sequence.end_regex = Regex::new(&case_insensitive_regex)
-                                    .map_err(|e| SelectorError::InvalidRegex { 
-                                        pattern: case_insensitive_regex, 
-                                        source: e 
+                                sequence.end_regex =
+                                    Regex::new(&case_insensitive_regex).map_err(|e| {
+                                        SelectorError::InvalidRegex {
+                                            pattern: case_insensitive_regex,
+                                            source: e,
+                                        }
                                     })?;
                             }
                         }
-                        1 => sequence.end_regex = Regex::new(&case_insensitive_regex)
-                            .map_err(|e| SelectorError::InvalidRegex { 
-                                pattern: case_insensitive_regex, 
-                                source: e 
-                            })?,
-                        2 => return Err(SelectorError::InvalidSelector {
-                            selector: selector.to_string(),
-                            reason: "Step size must be an integer".to_string(),
-                        }),
-                        _ => return Err(SelectorError::InvalidSelector {
-                            selector: selector.to_string(),
-                            reason: "A selector cannot be more than three components long".to_string(),
-                        }),
+                        1 => {
+                            sequence.end_regex =
+                                Regex::new(&case_insensitive_regex).map_err(|e| {
+                                    SelectorError::InvalidRegex {
+                                        pattern: case_insensitive_regex,
+                                        source: e,
+                                    }
+                                })?
+                        }
+                        2 => {
+                            return Err(SelectorError::InvalidSelector {
+                                selector: selector.to_string(),
+                                reason: "Step size must be an integer".to_string(),
+                            })
+                        }
+                        _ => {
+                            return Err(SelectorError::InvalidSelector {
+                                selector: selector.to_string(),
+                                reason: "A selector cannot be more than three components long"
+                                    .to_string(),
+                            })
+                        }
                     }
                 }
             }
