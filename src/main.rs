@@ -78,6 +78,48 @@ pub fn get_columns(
     }
 }
 
+/// Get vector of columns and track which selectors matched
+#[cfg_attr(test, allow(dead_code))]
+pub fn get_columns_with_match_info(
+    index_row: &str,
+    column_selectors: &mut [selector::Selector],
+    column_delimiter: &str,
+    original_selectors_str: &str,
+) -> Result<(Vec<usize>, Vec<String>), SelectorError> {
+    if column_selectors.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+
+    let mut export_column_idxs: Vec<usize> = Vec::new();
+    let mut matched_selectors: Vec<bool> = vec![false; column_selectors.len()];
+    let columns = utils::split(index_row, column_delimiter)?;
+    
+    for (col_idx, column) in columns.iter().enumerate() {
+        for (selector_idx, column_selector) in column_selectors.iter_mut().enumerate() {
+            if item_in_sequence(col_idx, column, column_selector) {
+                export_column_idxs.push(col_idx);
+                matched_selectors[selector_idx] = true;
+            }
+        }
+    }
+
+    // Collect unmatched selector strings
+    let original_parts: Vec<&str> = original_selectors_str.split(',').collect();
+    let unmatched: Vec<String> = matched_selectors
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, &matched)| {
+            if !matched && idx < original_parts.len() {
+                Some(original_parts[idx].trim().to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok((export_column_idxs, unmatched))
+}
+
 /// Grab cells in a row by a list of given indices.
 ///
 /// When `cells_to_select` is empty, the entire row is returned only if
@@ -187,21 +229,34 @@ fn main() {
         // Column selectors provided - process normally
         let mut export_cols: Vec<usize> = Vec::new();
         let mut output: Vec<Vec<String>> = Vec::new();
-        
+
         for (row_idx, row) in split_rows.iter().enumerate() {
             if row_idx == 0 {
-                export_cols = match get_columns(row, &mut column_selectors, &args.column_delimiter) {
-                    Ok(cols) => cols,
+                let (cols, unmatched) = match get_columns_with_match_info(
+                    row, 
+                    &mut column_selectors, 
+                    &args.column_delimiter, 
+                    &args.columns
+                ) {
+                    Ok((cols, unmatched)) => (cols, unmatched),
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         process::exit(1);
                     }
                 };
+                export_cols = cols;
+                
+                if export_cols.is_empty() {
+                    eprintln!("Warning: No valid columns found for selection");
+                } else if !unmatched.is_empty() {
+                    eprintln!("Warning: Column selectors did not match any columns: {}", unmatched.join(", "));
+                }
             }
             for row_selector in row_selectors.iter_mut() {
                 if item_in_sequence(row_idx, row, row_selector) {
                     let cells =
-                        match get_cells(row, &export_cols, &args.column_delimiter, select_full_row) {
+                        match get_cells(row, &export_cols, &args.column_delimiter, select_full_row)
+                        {
                             Ok(cells) => cells,
                             Err(e) => {
                                 eprintln!("Error: {}", e);
