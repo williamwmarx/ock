@@ -7,7 +7,7 @@ mod tests {
     fn test_selector_default() {
         let selector = Selector::default();
         assert_eq!(selector.start_idx, 0);
-        assert_eq!(selector.end_idx, std::i32::MAX);
+        assert_eq!(selector.end_idx, std::i64::MAX);
         assert_eq!(selector.step, 1);
         assert_eq!(selector.stopped, false);
         assert_eq!(selector.start_regex.as_str(), ".^");
@@ -75,7 +75,7 @@ mod tests {
     fn test_parse_selectors_regex() {
         let selectors = parse_selectors(&String::from("pid")).unwrap();
         assert_eq!(selectors.len(), 1);
-        assert_eq!(selectors[0].start_idx, i32::MAX);
+        assert_eq!(selectors[0].start_idx, i64::MAX);
         assert!(selectors[0].start_regex.is_match("PID"));
         assert!(selectors[0].start_regex.is_match("pid"));
         assert!(selectors[0].start_regex.is_match("some_pid_value"));
@@ -87,7 +87,7 @@ mod tests {
     fn test_parse_selectors_regex_range() {
         let selectors = parse_selectors(&String::from("start:end")).unwrap();
         assert_eq!(selectors.len(), 1);
-        assert_eq!(selectors[0].start_idx, i32::MAX);
+        assert_eq!(selectors[0].start_idx, i64::MAX);
         assert!(selectors[0].start_regex.is_match("START"));
         assert!(selectors[0].end_regex.is_match("END"));
         assert_eq!(selectors[0].start_regex.as_str(), "(?i).*start.*");
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(selectors.len(), 2);
 
         // First selector is a regex
-        assert_eq!(selectors[0].start_idx, i32::MAX);
+        assert_eq!(selectors[0].start_idx, i64::MAX);
         assert!(selectors[0].start_regex.is_match("PID"));
 
         // Second selector is an index
@@ -118,12 +118,12 @@ mod tests {
         let selectors = parse_selectors(&String::from("5:")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 5);
-        assert_eq!(selectors[0].end_idx, i32::MAX); // Default end
+        assert_eq!(selectors[0].end_idx, i64::MAX); // Default end
 
         let selectors = parse_selectors(&String::from("::2")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0); // Default start
-        assert_eq!(selectors[0].end_idx, i32::MAX); // Default end
+        assert_eq!(selectors[0].end_idx, i64::MAX); // Default end
         assert_eq!(selectors[0].step, 2);
     }
 
@@ -176,7 +176,7 @@ mod tests {
         let selectors = parse_selectors(&String::from("")).unwrap();
         assert_eq!(selectors.len(), 1);
         assert_eq!(selectors[0].start_idx, 0);
-        assert_eq!(selectors[0].end_idx, i32::MAX);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
 
         // Test multiple commas
         let selectors = parse_selectors(&String::from("1,,3")).unwrap();
@@ -213,6 +213,16 @@ mod tests {
         selector.resolve_indices(5);
         assert_eq!(selector.resolved_start_idx, 4);
         assert_eq!(selector.resolved_end_idx, 4);
+    }
+
+    #[test]
+    fn test_resolve_indices_out_of_bounds_negative_end() {
+        let mut selector = Selector::default();
+        selector.start_idx = 1;
+        selector.end_idx = -10;
+        selector.resolve_indices(5);
+        assert_eq!(selector.resolved_start_idx, usize::MAX);
+        assert_eq!(selector.resolved_end_idx, usize::MAX);
     }
 
     #[test]

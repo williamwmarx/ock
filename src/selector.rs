@@ -40,7 +40,7 @@ impl std::error::Error for SelectorError {
 #[derive(Debug)]
 pub struct Selector {
     /// Index of first row to grab (start of range) - can be negative for Python-style indexing
-    pub start_idx: i32,
+    pub start_idx: i64,
 
     /// Resolved start index (converted from negative to positive if needed)
     pub resolved_start_idx: usize,
@@ -49,7 +49,7 @@ pub struct Selector {
     pub start_regex: regex::Regex,
 
     /// Index of last row to grab (end of range) - can be negative for Python-style indexing
-    pub end_idx: i32,
+    pub end_idx: i64,
 
     /// Resolved end index (converted from negative to positive if needed)
     pub resolved_end_idx: usize,
@@ -89,7 +89,7 @@ impl Selector {
             start_idx: 0,
             resolved_start_idx: 0,
             start_regex,
-            end_idx: i32::MAX,
+            end_idx: i64::MAX,
             resolved_end_idx: usize::MAX,
             end_regex,
             step: 1,
@@ -124,7 +124,7 @@ impl Selector {
             } else {
                 collection_length.saturating_sub(abs_idx)
             }
-        } else if self.start_idx == i32::MAX {
+        } else if self.start_idx == i64::MAX {
             usize::MAX // Keep as usize::MAX for regex-based selection
         } else if self.start_idx == 0 {
             0 // Handle the special case of 0 (keep as 0, don't convert)
@@ -136,7 +136,8 @@ impl Selector {
         self.resolved_end_idx = if self.end_idx < 0 {
             let abs_idx = (-self.end_idx) as usize;
             if abs_idx > collection_length {
-                0 // Out of bounds negative index, clamp to start
+                self.resolved_start_idx = usize::MAX;
+                usize::MAX // Out of bounds negative index, yield no matches
             } else {
                 let idx = collection_length.saturating_sub(abs_idx);
                 if self.start_idx != self.end_idx {
@@ -145,13 +146,18 @@ impl Selector {
                     idx
                 }
             }
-        } else if self.end_idx == i32::MAX {
+        } else if self.end_idx == i64::MAX {
             usize::MAX // Keep as usize::MAX for regex-based or unlimited selection
         } else if self.end_idx == 0 {
             0 // Handle the special case of 0 (keep as 0, don't convert)
         } else {
             (self.end_idx - 1) as usize // Convert 1-based to 0-based for positive indices
         };
+
+        if self.resolved_start_idx > self.resolved_end_idx {
+            self.resolved_start_idx = usize::MAX;
+            self.resolved_end_idx = usize::MAX;
+        }
 
         self.indices_resolved = true;
     }
@@ -212,7 +218,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
             // Try to parse int from component. If we're successful, use that int as a start index,
             // end index, or step. If parse() returns an error, use that component as a regex
             // pattern to match to
-            let parsed_component = component.parse::<i32>();
+            let parsed_component = component.parse::<i64>();
             match parsed_component {
                 Ok(_ok) => {
                     let raw_number = parsed_component.as_ref().unwrap();
@@ -261,8 +267,8 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                                         source: e,
                                     }
                                 })?;
-                            // Set the start index to the i32 max to ensure it doesn't interfere
-                            sequence.start_idx = i32::MAX;
+                            // Set the start index to the i64 max to ensure it doesn't interfere
+                            sequence.start_idx = i64::MAX;
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
                                 sequence.end_regex =

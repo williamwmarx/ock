@@ -58,8 +58,8 @@ mod tests {
         let mut selector = Selector::default();
         selector.start_regex = Regex::new(r"(?i).*pid.*").unwrap();
         selector.end_regex = Regex::new(r"(?i).*pid.*").unwrap();
-        selector.start_idx = i32::MAX;
-        selector.end_idx = i32::MAX;
+        selector.start_idx = i64::MAX;
+        selector.end_idx = i64::MAX;
 
         let pid_item = String::from("PID");
         let user_item = String::from("USER");
@@ -129,6 +129,18 @@ mod tests {
         let len = 5;
         assert!(item_in_sequence(0, &item, &mut selector, len));
         assert!(item_in_sequence(3, &item, &mut selector, len));
+        assert!(!item_in_sequence(4, &item, &mut selector, len));
+    }
+
+    #[test]
+    fn test_item_in_sequence_negative_range_out_of_bounds() {
+        let mut selector = Selector::default();
+        selector.start_idx = 1;
+        selector.end_idx = -10;
+
+        let item = String::from("test");
+        let len = 5;
+        assert!(!item_in_sequence(0, &item, &mut selector, len));
         assert!(!item_in_sequence(4, &item, &mut selector, len));
     }
 
