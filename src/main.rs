@@ -82,8 +82,8 @@ pub fn get_columns(
 #[cfg_attr(test, allow(dead_code))]
 pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -> Result<Vec<String>, SelectorError> {
     if cells_to_select.is_empty() {
-        // If no cells to select specified, return one element vector of the row
-        Ok(vec![row.to_string()])
+        // If no cells to select specified, return empty vector
+        Ok(Vec::new())
     } else {
         // Iterate through cells in row and push ones with matching indeces to output vector
         let mut output: Vec<String> = Vec::new();
