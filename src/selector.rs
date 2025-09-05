@@ -62,7 +62,7 @@ impl std::error::Error for SelectorError {
 }
 
 /// Keep track of user column and row selections
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Selector {
     /// Index of first row to grab (start of range) - can be negative for Python-style indexing
     pub start_idx: i64,
