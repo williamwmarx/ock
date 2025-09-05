@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::selector::{parse_selectors, Selector};
+    use crate::selector::{get_or_compile_regex, parse_selectors, Selector};
     use crate::{
         format_columns, get_cells, get_columns, get_columns_immutable, get_columns_with_match_info,
         get_columns_with_match_info_immutable, item_in_sequence, item_in_sequence_with_state,
         SelectionState,
     };
-    use regex::Regex;
 
     #[test]
     fn test_item_in_sequence_single_index() {
@@ -92,8 +91,8 @@ mod tests {
     #[test]
     fn test_item_in_sequence_regex_single() {
         let mut selector = Selector::default();
-        selector.start_regex = Regex::new(r"(?i).*pid.*").unwrap();
-        selector.end_regex = Regex::new(r"(?i).*pid.*").unwrap();
+        selector.start_regex = get_or_compile_regex(r"(?i).*pid.*").unwrap();
+        selector.end_regex = get_or_compile_regex(r"(?i).*pid.*").unwrap();
         selector.start_idx = i64::MAX;
         selector.end_idx = i64::MAX;
 
@@ -110,8 +109,8 @@ mod tests {
     #[test]
     fn test_item_in_sequence_regex_range() {
         let mut selector = Selector::default();
-        selector.start_regex = Regex::new(r"(?i).*start.*").unwrap();
-        selector.end_regex = Regex::new(r"(?i).*end.*").unwrap();
+        selector.start_regex = get_or_compile_regex(r"(?i).*start.*").unwrap();
+        selector.end_regex = get_or_compile_regex(r"(?i).*end.*").unwrap();
 
         let start = String::from("START");
         let middle = String::from("MIDDLE");

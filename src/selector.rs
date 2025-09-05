@@ -1,6 +1,35 @@
+use lru::LruCache;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::fmt;
+use std::num::NonZeroUsize;
+use std::sync::{Arc, Mutex};
 include!("utils.rs");
+
+/// Global cache for compiled regex patterns to avoid recompilation.
+///
+/// Cache size is limited to `REGEX_CACHE_CAPACITY` entries using an LRU policy
+/// to bound memory usage.
+const REGEX_CACHE_CAPACITY: usize = 128;
+pub(crate) static REGEX_CACHE: Lazy<Mutex<LruCache<String, Arc<Regex>>>> = Lazy::new(|| {
+    let cap = NonZeroUsize::new(REGEX_CACHE_CAPACITY).unwrap();
+    Mutex::new(LruCache::new(cap))
+});
+
+/// Get or compile a regex pattern, using a global cache for performance.
+///
+/// Mutex poisoning is ignored by taking ownership of the inner value,
+/// allowing continued use of the existing cache.
+pub(crate) fn get_or_compile_regex(pattern: &str) -> Result<Arc<Regex>, regex::Error> {
+    let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(regex) = cache.get(pattern) {
+        return Ok(regex.clone());
+    }
+
+    let compiled = Arc::new(Regex::new(pattern)?);
+    cache.put(pattern.to_string(), compiled.clone());
+    Ok(compiled)
+}
 
 #[derive(Debug)]
 pub enum SelectorError {
@@ -46,7 +75,7 @@ pub struct Selector {
     pub resolved_start_idx: usize,
 
     /// Regex of first to grab (start of range)
-    pub start_regex: regex::Regex,
+    pub start_regex: Arc<regex::Regex>,
 
     /// Index of last row to grab (end of range) - can be negative for Python-style indexing
     pub end_idx: i64,
@@ -55,7 +84,7 @@ pub struct Selector {
     pub resolved_end_idx: usize,
 
     /// Regex of last row to grab (end of range)
-    pub end_regex: regex::Regex,
+    pub end_regex: Arc<regex::Regex>,
 
     /// Step size between start and end of range
     pub step: usize,
@@ -76,14 +105,16 @@ impl Selector {
     /// This should never fail in practice since we use a known-good regex pattern.
     pub fn new() -> Result<Selector, SelectorError> {
         let default_regex = r".^";
-        let start_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
-            pattern: default_regex.to_string(),
-            source: e,
-        })?;
-        let end_regex = Regex::new(default_regex).map_err(|e| SelectorError::InvalidRegex {
-            pattern: default_regex.to_string(),
-            source: e,
-        })?;
+        let start_regex =
+            get_or_compile_regex(default_regex).map_err(|e| SelectorError::InvalidRegex {
+                pattern: default_regex.to_string(),
+                source: e,
+            })?;
+        let end_regex =
+            get_or_compile_regex(default_regex).map_err(|e| SelectorError::InvalidRegex {
+                pattern: default_regex.to_string(),
+                source: e,
+            })?;
 
         Ok(Selector {
             start_idx: 0,
@@ -210,7 +241,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
     for selector in selectors.split(",") {
         let mut sequence = Selector::new()?;
         let components: Vec<&str> = selector.split(":").collect();
-        
+
         // Handle completely empty selector (from consecutive commas like "1,,3")
         if selector.is_empty() {
             // Empty selector means select all - Python slice [:] semantics
@@ -220,7 +251,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
             sequences.push(sequence);
             continue;
         }
-        
+
         // Iterate through components in an individual selector, which are separated by colons
         for (idx, component) in components.iter().enumerate() {
             // Handle empty components with Python slice semantics
@@ -287,33 +318,27 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                     let case_insensitive_regex = format!(r"(?i).*{}.*", &component);
                     match idx {
                         0 => {
-                            sequence.start_regex =
-                                Regex::new(&case_insensitive_regex).map_err(|e| {
-                                    SelectorError::InvalidRegex {
-                                        pattern: case_insensitive_regex.clone(),
-                                        source: e,
-                                    }
+                            sequence.start_regex = get_or_compile_regex(&case_insensitive_regex)
+                                .map_err(|e| SelectorError::InvalidRegex {
+                                    pattern: case_insensitive_regex.clone(),
+                                    source: e,
                                 })?;
                             // Set the start index to the i64 max to ensure it doesn't interfere
                             sequence.start_idx = i64::MAX;
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
-                                sequence.end_regex =
-                                    Regex::new(&case_insensitive_regex).map_err(|e| {
-                                        SelectorError::InvalidRegex {
-                                            pattern: case_insensitive_regex,
-                                            source: e,
-                                        }
+                                sequence.end_regex = get_or_compile_regex(&case_insensitive_regex)
+                                    .map_err(|e| SelectorError::InvalidRegex {
+                                        pattern: case_insensitive_regex,
+                                        source: e,
                                     })?;
                             }
                         }
                         1 => {
-                            sequence.end_regex =
-                                Regex::new(&case_insensitive_regex).map_err(|e| {
-                                    SelectorError::InvalidRegex {
-                                        pattern: case_insensitive_regex,
-                                        source: e,
-                                    }
+                            sequence.end_regex = get_or_compile_regex(&case_insensitive_regex)
+                                .map_err(|e| SelectorError::InvalidRegex {
+                                    pattern: case_insensitive_regex,
+                                    source: e,
                                 })?
                         }
                         2 => {
