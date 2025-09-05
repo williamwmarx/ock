@@ -472,15 +472,11 @@ col3";
 
 #[test]
 fn test_out_of_bounds_indices() {
-    let input = "a b c
-1 2 3";
+    let input = "a b c\n1 2 3";
 
-    // NOTE: Current behavior when requesting non-existent column 10 is to return
-    // the entire row. This is questionable UX - might be better to return empty
-    // or error. But this test documents CURRENT behavior accurately.
+    // Requesting a non-existent column should produce no output
     let output = run_ock_with_stdin(input, vec!["-c", "10"]);
-    assert!(output.contains("a b c"));
-    assert!(output.contains("1 2 3"));
+    assert!(output.trim().is_empty());
 
     // Request row 10 (doesn't exist) - correctly returns empty
     let output2 = run_ock_with_stdin(input, vec!["-r", "10"]);
