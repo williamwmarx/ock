@@ -6,7 +6,6 @@ mod tests {
         get_columns_with_match_info_immutable, item_in_sequence, item_in_sequence_with_state,
         SelectionState,
     };
-    use regex::Regex;
 
     #[test]
     fn test_item_in_sequence_single_index() {
