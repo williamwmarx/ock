@@ -1,5 +1,29 @@
 use regex::Regex;
+use std::fmt;
 include!("utils.rs");
+
+#[derive(Debug)]
+pub enum SelectorError {
+    InvalidRegex { pattern: String, source: regex::Error },
+}
+
+impl fmt::Display for SelectorError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SelectorError::InvalidRegex { pattern, source } => {
+                write!(f, "Invalid regex pattern '{}': {}", pattern, source)
+            }
+        }
+    }
+}
+
+impl std::error::Error for SelectorError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SelectorError::InvalidRegex { source, .. } => Some(source),
+        }
+    }
+}
 
 /// Keep track of user column and row selections
 #[derive(Debug)]
@@ -23,28 +47,46 @@ pub struct Selector {
     pub stopped: bool,
 }
 
+impl Selector {
+    /// Create a new default selector
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(Selector)` with default values or `Err(SelectorError)` if the default regex cannot be compiled.
+    /// This should never fail in practice since we use a known-good regex pattern.
+    pub fn new() -> Result<Selector, SelectorError> {
+        let default_regex = r".^";
+        let start_regex = Regex::new(default_regex)
+            .map_err(|e| SelectorError::InvalidRegex { 
+                pattern: default_regex.to_string(), 
+                source: e 
+            })?;
+        let end_regex = Regex::new(default_regex)
+            .map_err(|e| SelectorError::InvalidRegex { 
+                pattern: default_regex.to_string(), 
+                source: e 
+            })?;
+            
+        Ok(Selector {
+            start_idx: 0,
+            start_regex,
+            end_idx: usize::MAX,
+            end_regex,
+            step: 1,
+            stopped: false,
+        })
+    }
+}
+
 impl Default for Selector {
     /// Defaults to implement a new selector without defining each field individually
+    /// 
+    /// # Panics
+    /// 
+    /// This will panic if the default regex pattern fails to compile, which should never happen.
+    /// For error handling, use `Selector::new()` instead.
     fn default() -> Selector {
-        Selector {
-            // Default start to 0, the first row/column
-            start_idx: 0,
-
-            // Default start to ".^", an impossible Regex that nothing will match
-            start_regex: Regex::new(r".^").unwrap(),
-
-            // Default end to the max usize value (i.e. 2^64 - 1 on an amd64 machine)
-            end_idx: usize::MAX,
-
-            // Default end to ".^", an impossible Regex that nothing will match
-            end_regex: Regex::new(r".^").unwrap(),
-
-            // Default step to 1 to get each row
-            step: 1,
-
-            // Default stopped to false so we output rows unless otherwise specified
-            stopped: false,
-        }
+        Selector::new().expect("Default selector regex should always compile")
     }
 }
 
@@ -65,11 +107,15 @@ impl PartialEq for Selector {
 
 /// Parse either row or column selectors, turning Python-like list slicing syntax into vector of
 /// Selector structs
-pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
+/// 
+/// # Errors
+/// 
+/// Returns `SelectorError::InvalidRegex` if any regex pattern fails to compile.
+pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> {
     let mut sequences: Vec<Selector> = Vec::new();
     // Iterate through selectors, which are separated by commas
     for selector in selectors.split(",") {
-        let mut sequence = Selector::default();
+        let mut sequence = Selector::new()?;
         // Iterate through components in an individual selector, which are separated by colons
         for (idx, component) in selector.split(":").enumerate() {
             // If component is empty, we do nothing
@@ -107,15 +153,27 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
                     let case_insensitive_regex = format!(r"(?i).*{}.*", &component);
                     match idx {
                         0 => {
-                            sequence.start_regex = Regex::new(&case_insensitive_regex).unwrap();
+                            sequence.start_regex = Regex::new(&case_insensitive_regex)
+                                .map_err(|e| SelectorError::InvalidRegex { 
+                                    pattern: case_insensitive_regex.clone(), 
+                                    source: e 
+                                })?;
                             // Set the start index to the usize max to ensure it doesn't interfere
                             sequence.start_idx = usize::MAX;
                             // If this is the full selection, set this to the end regex as well
                             if selector.matches(":").count() == 0 {
-                                sequence.end_regex = Regex::new(&case_insensitive_regex).unwrap();
+                                sequence.end_regex = Regex::new(&case_insensitive_regex)
+                                    .map_err(|e| SelectorError::InvalidRegex { 
+                                        pattern: case_insensitive_regex, 
+                                        source: e 
+                                    })?;
                             }
                         }
-                        1 => sequence.end_regex = Regex::new(&case_insensitive_regex).unwrap(),
+                        1 => sequence.end_regex = Regex::new(&case_insensitive_regex)
+                            .map_err(|e| SelectorError::InvalidRegex { 
+                                pattern: case_insensitive_regex, 
+                                source: e 
+                            })?,
                         2 => panic!("Step size must be an integer"),
                         _ => panic!("A selector cannot be more than three components long"),
                     }
@@ -126,7 +184,7 @@ pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
         sequences.push(sequence);
     }
     // Return all selectors
-    sequences
+    Ok(sequences)
 }
 
 #[cfg(test)]

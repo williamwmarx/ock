@@ -16,22 +16,27 @@ mod utils {
     }
 
     /// Split given text by a delimiter, returning a vector of Strings
+    /// 
+    /// # Errors
+    /// 
+    /// Returns a formatted error string if the delimiter regex pattern fails to compile.
     #[allow(dead_code)]
-    pub fn split(text: &str, delimiter: &str) -> Vec<String> {
+    pub fn split(text: &str, delimiter: &str) -> Result<Vec<String>, String> {
         if delimiter.is_empty() {
             // Split by lines if empty delmiter passed. This should be faster than regex split
-            text.lines()
+            Ok(text.lines()
                 .filter(|s| !s.is_empty())
                 .map(String::from)
-                .collect()
+                .collect())
         } else {
             // Split by regex
-            Regex::new(delimiter)
-                .unwrap()
+            let regex = Regex::new(delimiter)
+                .map_err(|e| format!("Invalid delimiter pattern '{}': {}", delimiter, e))?;
+            Ok(regex
                 .split(text)
                 .filter(|s| !s.is_empty())
                 .map(String::from)
-                .collect()
+                .collect())
         }
     }
 }
