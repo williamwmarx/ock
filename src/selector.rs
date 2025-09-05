@@ -34,7 +34,7 @@ impl Default for Selector {
             start_regex: Regex::new(r".^").unwrap(),
 
             // Default end to the max usize value (i.e. 2^64 - 1 on an amd64 machine)
-            end_idx: std::usize::MAX,
+            end_idx: usize::MAX,
 
             // Default end to ".^", an impossible Regex that nothing will match
             end_regex: Regex::new(r".^").unwrap(),
@@ -65,7 +65,7 @@ impl PartialEq for Selector {
 
 /// Parse either row or column selectors, turning Python-like list slicing syntax into vector of
 /// Selector structs
-pub fn parse_selectors(selectors: &String) -> Vec<Selector> {
+pub fn parse_selectors(selectors: &str) -> Vec<Selector> {
     let mut sequences: Vec<Selector> = Vec::new();
     // Iterate through selectors, which are separated by commas
     for selector in selectors.split(",") {
@@ -74,7 +74,7 @@ pub fn parse_selectors(selectors: &String) -> Vec<Selector> {
         for (idx, component) in selector.split(":").enumerate() {
             // If component is empty, we do nothing
             if component.is_empty() {
-                continue
+                continue;
             }
             // Try to parse int from component. If we're successful, use that int as a start index,
             // end index, or step. If parse() returns an error, use that component as a regex

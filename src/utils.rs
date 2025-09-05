@@ -17,11 +17,11 @@ mod utils {
 
     /// Split given text by a delimiter, returning a vector of Strings
     #[allow(dead_code)]
-    pub fn split(text: &String, delimiter: &String) -> Vec<String> {
+    pub fn split(text: &str, delimiter: &str) -> Vec<String> {
         if delimiter.is_empty() {
             // Split by lines if empty delmiter passed. This should be faster than regex split
             text.lines()
-                .filter(|&s| s.is_empty() == false)
+                .filter(|s| !s.is_empty())
                 .map(String::from)
                 .collect()
         } else {
@@ -29,7 +29,7 @@ mod utils {
             Regex::new(delimiter)
                 .unwrap()
                 .split(text)
-                .filter(|&s| s.is_empty() == false)
+                .filter(|s| !s.is_empty())
                 .map(String::from)
                 .collect()
         }
