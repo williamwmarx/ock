@@ -47,12 +47,13 @@ mod tests {
     #[test]
     fn test_parse_input_empty_string() {
         // Note: This would normally read from stdin, but we can't easily test that
-        // in a unit test without mocking stdin. In integration tests, we'll test this
-        // with actual piped input.
+        // in a unit test without mocking stdin. Stdin functionality is comprehensively 
+        // tested in integration tests via the run_ock_with_stdin() helper function.
         let _input = String::from("");
         // This test would hang waiting for stdin in actual execution
         // We're just documenting the expected behavior here
         // In real usage, parse_input("") would call read_stdin()
+        // See tests/integration_test.rs for complete stdin test coverage
     }
 
     #[test]
