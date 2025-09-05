@@ -78,14 +78,21 @@ pub fn get_columns(
     }
 }
 
-/// Grab cells in a row by a list of given indeces
+/// Grab cells in a row by a list of given indices
+///
+/// Returns the entire row when `cells_to_select` is empty. If indices are
+/// provided but none match, an empty vector is returned.
 #[cfg_attr(test, allow(dead_code))]
-pub fn get_cells(row: &str, cells_to_select: &[usize], column_delimiter: &str) -> Result<Vec<String>, SelectorError> {
+pub fn get_cells(
+    row: &str,
+    cells_to_select: &[usize],
+    column_delimiter: &str,
+) -> Result<Vec<String>, SelectorError> {
     if cells_to_select.is_empty() {
-        // If no cells to select specified, return empty vector
-        Ok(Vec::new())
+        // If no cells to select specified, return the entire row
+        Ok(vec![row.to_string()])
     } else {
-        // Iterate through cells in row and push ones with matching indeces to output vector
+        // Iterate through cells in row and push ones with matching indices to output vector
         let mut output: Vec<String> = Vec::new();
         let cells = utils::split(row, column_delimiter)?;
         for (cell_idx, cell) in cells.iter().enumerate() {
