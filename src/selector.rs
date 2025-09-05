@@ -21,19 +21,12 @@ pub(crate) static REGEX_CACHE: Lazy<Mutex<LruCache<String, Arc<Regex>>>> = Lazy:
 /// Mutex poisoning is ignored by taking ownership of the inner value,
 /// allowing continued use of the existing cache.
 pub(crate) fn get_or_compile_regex(pattern: &str) -> Result<Arc<Regex>, regex::Error> {
-    {
-        let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(regex) = cache.get(pattern) {
-            return Ok(regex.clone());
-        }
-    }
-
-    let compiled = Arc::new(Regex::new(pattern)?);
-
     let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(regex) = cache.get(pattern) {
         return Ok(regex.clone());
     }
+
+    let compiled = Arc::new(Regex::new(pattern)?);
     cache.put(pattern.to_string(), compiled.clone());
     Ok(compiled)
 }
