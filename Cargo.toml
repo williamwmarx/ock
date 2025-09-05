@@ -16,3 +16,6 @@ panic = "abort"
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 regex = "1.7.0"
+
+[dev-dependencies]
+tempfile = "3.8.0"
