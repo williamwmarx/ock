@@ -29,7 +29,9 @@ pub fn item_in_sequence(item_idx: usize, item: &String, selector: &mut selector:
             // Only one column selected
             selector.stopped = true;
         }
-    } else if item_idx == selector.end_idx || selector.end_regex.is_match(item) {
+    } else if (item_idx == selector.end_idx && (item_idx - selector.start_idx) % selector.step == 0)
+        || selector.end_regex.is_match(item)
+    {
         // Sequence end
         in_sequence = true;
         selector.end_idx = item_idx;
