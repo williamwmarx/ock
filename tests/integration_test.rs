@@ -534,9 +534,9 @@ fn test_stdin_with_multiple_newlines() {
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
     assert!(output.contains("line3"));
-    // Should preserve empty lines
+    // Should preserve empty lines: line1 + 2 empty + line2 + 1 empty + line3 = 6 lines
     let lines: Vec<&str> = output.lines().collect();
-    assert!(lines.len() >= 5); // At least 5 lines due to empty lines
+    assert_eq!(lines.len(), 6, "Expected exactly 6 lines: line1, empty, empty, line2, empty, line3");
 }
 
 #[test]
@@ -566,13 +566,13 @@ fn test_stdin_large_input() {
 }
 
 #[test]
-fn test_stdin_binary_safety() {
-    // Test stdin with non-UTF8 sequences - should handle gracefully
-    let input = "normal_text\nmore_text";
+fn test_stdin_utf8_safety() {
+    // Test stdin with UTF8 text including special characters - should handle gracefully
+    let input = "normal_text\nmore_text_with_émojis_🦀";
     let output = run_ock_with_stdin(input, vec![]);
     
     assert!(output.contains("normal_text"));
-    assert!(output.contains("more_text"));
+    assert!(output.contains("more_text_with_émojis_🦀"));
 }
 
 #[test]
