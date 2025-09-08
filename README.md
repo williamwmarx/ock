@@ -1,5 +1,5 @@
 # ock
-A simpler, faster replacement for most awk use cases, ock is a command line utility for working with
+A simpler, faster replacement for most `awk` use cases, `ock` is a command line utility for working with
 table-like data.
 
 ## Installation
@@ -40,3 +40,6 @@ ps aux | ock -c name, pid -r "python(2|3)"
 ```
 ock  -r 1:10:2 -c 1,5 --column-delimiter "," data.csv
 ```
+
+## License
+MIT license. See [LICENSE](LICENSE) for details.

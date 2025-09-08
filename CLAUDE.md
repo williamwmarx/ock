@@ -1,6 +1,6 @@
-# CLAUDE.md
+# Instructions for Agents
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Project Overview
 
@@ -26,13 +26,27 @@ cargo test --lib                    # Run unit tests only
 ```bash
 cargo fmt            # Format code
 cargo fmt --check    # Check formatting without changes
+cargo fmt --all      # Format all targets
 cargo clippy         # Run linter
+cargo clippy -- -D warnings  # Lint with warnings as errors (CI)
 ```
 
 ### Installation
 ```bash
 cargo install --path .  # Install ock locally for testing
 ```
+
+### Run Examples
+```bash
+ps aux | cargo run -- -c pid -r 0:10  # Example: filter process list
+```
+
+## Code Style & Conventions
+
+- Use rustfmt defaults (4-space indent); run before pushing
+- Naming: functions/vars `snake_case`, types `CamelCase`, consts `SCREAMING_SNAKE_CASE`
+- Add `///` docs for public items; keep examples small and runnable
+- Prefer iterators and borrowing; keep `main` thin and move logic into modules
 
 ## Core Architecture
 
@@ -98,19 +112,6 @@ cargo install --path .  # Install ock locally for testing
 - Step value of 0: Treated as step 1
 - Whitespace-only lines with default delimiter: Filtered out by split()
 
-## Known Issues and TODOs
-- Step values in selectors have a documented bug (see test_row_range_with_step comment)
-- Out-of-bounds column indices return entire row instead of empty (see test_out_of_bounds_indices)
-- Consider error handling for invalid selector syntax instead of silent failures
-
-## Performance Optimizations
-- Release profile uses aggressive optimizations:
-  - Strip symbols for smaller binary
-  - Optimize for size (`opt-level = "z"`)
-  - Link-time optimization enabled
-  - Single codegen unit for better optimization
-  - Panic=abort for smaller binary
-
 ## Common Usage Patterns
 ```bash
 # Select specific columns from process list
@@ -125,3 +126,29 @@ ock -c 1,3,5 --column-delimiter "," data.csv
 # Select row ranges with step
 ock -r 1:100:10 large_file.txt  # Every 10th row from 1-100
 ```
+
+## CI/CD & PR Guidelines
+
+- Commits: concise, imperative subject; reference issues (e.g., `Fix selector step off-by-one (#42)`)
+- Always use conventional commits (`feat:`, `fix:`, `docs:`)
+- PRs: describe problem, approach, and tradeoffs; link issues; include before/after examples when changing flags or output
+- Ensure `cargo fmt`, `cargo clippy`, build, and tests pass before review
+- Update `README.md` when altering flags, defaults, or examples
+
+## Security Notes
+
+- Be mindful of user-supplied regex and delimiters; avoid catastrophic backtracking
+- Validate input and handle errors with clear messages; no new `panic!`s in production code paths
+
+## Known Issues and TODOs
+- Step values in selectors have a documented bug (see test_row_range_with_step comment)
+- Out-of-bounds column indices return entire row instead of empty (see test_out_of_bounds_indices)
+- Consider error handling for invalid selector syntax instead of silent failures
+
+## Performance Optimizations
+- Release profile uses aggressive optimizations:
+  - Strip symbols for smaller binary
+  - Optimize for size (`opt-level = "z"`)
+  - Link-time optimization enabled
+  - Single codegen unit for better optimization
+  - Panic=abort for smaller binary
