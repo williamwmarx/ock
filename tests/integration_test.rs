@@ -491,7 +491,7 @@ fn test_stdin_basic_functionality() {
     // Test that stdin input works with basic data
     let input = "line1\nline2\nline3";
     let output = run_ock_with_stdin(input, vec![]);
-    
+
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
     assert!(output.contains("line3"));
@@ -516,7 +516,7 @@ fn test_stdin_with_trailing_newlines() {
     // Test stdin preserves trailing newlines correctly
     let input = "line1\nline2\n";
     let output = run_ock_with_stdin(input, vec![]);
-    
+
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
 }
@@ -527,7 +527,7 @@ fn test_stdin_with_multiple_newlines() {
     // split() filters out empty strings, so blank lines are ignored
     let input = "line1\n\n\nline2\n\nline3";
     let output = run_ock_with_stdin(input, vec![]);
-    
+
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
     assert!(output.contains("line3"));
@@ -541,7 +541,7 @@ fn test_stdin_with_whitespace_only_lines() {
     // Test stdin with lines containing only whitespace
     let input = "line1\n   \n\t\nline2";
     let output = run_ock_with_stdin(input, vec![]);
-    
+
     assert!(output.contains("line1"));
     assert!(output.contains("line2"));
 }
@@ -553,9 +553,9 @@ fn test_stdin_large_input() {
         .map(|i| format!("data_line_{}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     let output = run_ock_with_stdin(&large_input, vec!["-r", "1:10"]);
-    
+
     assert!(output.contains("data_line_1"));
     assert!(output.contains("data_line_10"));
     assert!(!output.contains("data_line_11"));
@@ -567,7 +567,7 @@ fn test_stdin_utf8_safety() {
     // Test stdin with UTF8 text including special characters - should handle gracefully
     let input = "normal_text\nmore_text_with_émojis_🦀";
     let output = run_ock_with_stdin(input, vec![]);
-    
+
     assert!(output.contains("normal_text"));
     assert!(output.contains("more_text_with_émojis_🦀"));
 }
@@ -576,13 +576,13 @@ fn test_stdin_utf8_safety() {
 fn test_stdin_vs_parse_input_consistency() {
     // Ensure stdin input behaves consistently with direct text input
     let test_data = "test_line1\ntest_line2\ntest_line3";
-    
+
     // Test via stdin
     let stdin_output = run_ock_with_stdin(test_data, vec!["-r", "2"]);
-    
+
     // Test via direct text (should be treated as literal if not a file)
     let direct_output = run_ock(vec!["-r", "2", test_data]);
-    
+
     // Both should contain the same selected row
     assert!(stdin_output.contains("test_line2"));
     assert!(direct_output.contains("test_line2"));
@@ -595,9 +595,9 @@ fn test_stdin_with_complex_selectors() {
 row1_c1 row1_c2 row1_c3 row1_c4
 row2_c1 row2_c2 row2_c3 row2_c4
 row3_c1 row3_c2 row3_c3 row3_c4";
-    
+
     let output = run_ock_with_stdin(input, vec!["-r", "2:3", "-c", "2,4"]);
-    
+
     assert!(output.contains("row1_c2"));
     assert!(output.contains("row1_c4"));
     assert!(output.contains("row2_c2"));
@@ -610,13 +610,13 @@ row3_c1 row3_c2 row3_c3 row3_c4";
 fn test_stdin_performance_benchmark() {
     // Performance test - ensure stdin can handle moderately large datasets efficiently
     let input: String = (1..=10000)
-        .map(|i| format!("row{} data{} info{} value{}", i, i*2, i*3, i*4))
+        .map(|i| format!("row{} data{} info{} value{}", i, i * 2, i * 3, i * 4))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     // This should complete in reasonable time
     let output = run_ock_with_stdin(&input, vec!["-r", "5000:5010", "-c", "1,3"]);
-    
+
     assert!(output.contains("row5000"));
     assert!(output.contains("row5010"));
     assert!(output.contains("info15000")); // 5000 * 3
