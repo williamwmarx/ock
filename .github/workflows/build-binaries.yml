@@ -1,0 +1,130 @@
+name: Build Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            archive-cmd: tar czf
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            archive-cmd: tar czf
+            cross: true
+          
+          # macOS
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            archive-cmd: tar czf
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            archive-cmd: tar czf
+          
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            archive-cmd: 7z a -tzip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Install cross-compilation dependencies
+        if: matrix.cross
+        run: |
+          cargo install cross --version 0.2.5
+      
+      - name: Build binary (cross)
+        if: matrix.cross
+        run: |
+          cross build --release --target ${{ matrix.target }}
+      
+      - name: Build binary (native)
+        if: '!matrix.cross'
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+      
+      - name: Prepare artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/ock dist/
+          cp README.md LICENSE dist/
+          cd dist
+          ${{ matrix.archive-cmd }} ../ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} *
+      
+      - name: Prepare artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/ock.exe dist/
+          cp README.md LICENSE dist/
+          cd dist
+          7z a -tzip ../ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} *
+      
+      - name: Generate checksum
+        shell: bash
+        run: |
+          shasum -a 256 ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} > checksum.txt
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ock-${{ matrix.target }}
+          path: |
+            ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }}
+            checksum.txt
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Collect checksums
+        run: |
+          cat artifacts/*/checksum.txt > checksums.txt
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
+            checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true

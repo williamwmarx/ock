@@ -20,6 +20,22 @@ cargo build           # Debug build
 cargo build --release # Optimized release build (applies aggressive optimizations from Cargo.toml)
 ```
 
+### Release Process
+The project uses automated release management via `release-plz`:
+- **Automatic Version Bumping**: Based on conventional commits (feat → minor, fix → patch, BREAKING CHANGE → major)
+- **Changelog Generation**: Automatically maintained in CHANGELOG.md
+- **Release Workflow**: Push to main triggers release-plz to create/update a Release PR
+- **Publishing**: Merging the Release PR publishes to crates.io and creates GitHub releases
+
+To trigger a release:
+1. Ensure all commits use conventional commit format
+2. Push changes to main
+3. Review and merge the automated Release PR created by release-plz
+4. Binary builds automatically trigger on new version tags
+
+**Required Setup**:
+- `CARGO_REGISTRY_TOKEN` secret must be configured in GitHub repository settings for crates.io publishing
+
 ### Test
 ```bash
 cargo test                           # Run all tests (unit and integration)
@@ -135,6 +151,27 @@ ock -r 1:100:10 large_file.txt  # Every 10th row from 1-100
 ```
 
 ## CI/CD & PR Guidelines
+
+### GitHub Actions Workflows
+The project uses three automated workflows:
+
+1. **CI Workflow** (`ci.yml`): Runs on all PRs
+   - Validates formatting with `cargo fmt`
+   - Runs clippy linting
+   - Executes all tests
+   - Builds release binary
+
+2. **Release Workflow** (`release.yml`): Runs on pushes to main
+   - Uses release-plz for automated version management
+   - Creates/updates Release PRs with version bumps and changelog
+   - Publishes to crates.io when Release PR is merged
+   - Creates git tags for new versions
+
+3. **Binary Build Workflow** (`build-binaries.yml`): Triggers on version tags
+   - Builds binaries for multiple platforms (Linux, macOS, Windows)
+   - Supports x86_64 and aarch64 architectures
+   - Creates GitHub Releases with downloadable binaries
+   - Generates checksums for all artifacts
 
 ### Branch Protection
 - The `main` branch has branch protection enabled and cannot be pushed to directly

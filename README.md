@@ -1,5 +1,9 @@
 # ock
 
+[![Crates.io](https://img.shields.io/crates/v/ock.svg)](https://crates.io/crates/ock)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/williamwmarx/ock/actions/workflows/ci.yml/badge.svg)](https://github.com/williamwmarx/ock/actions/workflows/ci.yml)
+
 `ock` is a lightweight command-line tool for slicing tabular data. It covers many everyday awk tasks with a simpler, faster interface.
 
 The project started as an effort to learn Rust and forget awk. It became useful enough for me and I stopped maintaining it. Now, thanks to the fine folks at [Anthropic](https://www.anthropic.com/claude-code) and [OpenAI](https://openai.com/codex/) making the cost of code maintenance ~zero, the project is back under active development.
@@ -11,9 +15,24 @@ The project started as an effort to learn Rust and forget awk. It became useful 
 - Work with custom row and column delimiters
 
 ## Installation
+
+### From crates.io
 ```sh
 cargo install ock
 ```
+
+### Using cargo-binstall
+```sh
+cargo binstall ock
+```
+
+### Pre-built binaries
+Download pre-built binaries for your platform from the [releases page](https://github.com/williamwmarx/ock/releases).
+
+Available for:
+- Linux (x86_64, aarch64)
+- macOS (x86_64, Apple Silicon)
+- Windows (x86_64)
 
 ## Usage
 
