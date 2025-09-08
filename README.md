@@ -46,3 +46,6 @@ ps aux | ock -c pid,command -r 'python'
 ```
 
 Out-of-bounds selections produce a warning and no output.
+
+## License
+MIT license. See [LICENSE](LICENSE) for details.
