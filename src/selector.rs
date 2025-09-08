@@ -310,7 +310,7 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                                 selector: selector.to_string(),
                                 reason: "A selector cannot be more than three components long"
                                     .to_string(),
-                            })
+                            });
                         }
                     }
                 }
@@ -339,20 +339,20 @@ pub fn parse_selectors(selectors: &str) -> Result<Vec<Selector>, SelectorError> 
                                 .map_err(|e| SelectorError::InvalidRegex {
                                     pattern: case_insensitive_regex,
                                     source: e,
-                                })?
+                                })?;
                         }
                         2 => {
                             return Err(SelectorError::InvalidSelector {
                                 selector: selector.to_string(),
                                 reason: "Step size must be an integer".to_string(),
-                            })
+                            });
                         }
                         _ => {
                             return Err(SelectorError::InvalidSelector {
                                 selector: selector.to_string(),
                                 reason: "A selector cannot be more than three components long"
                                     .to_string(),
-                            })
+                            });
                         }
                     }
                 }

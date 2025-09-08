@@ -25,7 +25,7 @@ pub struct Args {
     pub column_delimiter: String,
 
     /// Text to parse
-    #[arg(value_delimiter = None, default_value = "", help="Text to parse")]
+    #[arg(value_delimiter = None, default_value = "", help = "Text to parse")]
     pub input: String,
 }
 

@@ -12,7 +12,7 @@ include!("utils.rs");
 pub struct SelectionState {
     /// Current resolved start index for this iteration
     pub current_start_idx: usize,
-    /// Current resolved end index for this iteration  
+    /// Current resolved end index for this iteration
     pub current_end_idx: usize,
     /// Whether the selection has been stopped (for single item selections)
     pub stopped: bool,
