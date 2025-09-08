@@ -12,6 +12,7 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +56,7 @@ jobs:
       - name: Install cross-compilation dependencies
         if: matrix.cross
         run: |
-          cargo install cross --git https://github.com/cross-rs/cross
+          cargo install cross --version 0.2.5
       
       - name: Build binary (cross)
         if: matrix.cross
@@ -89,12 +90,7 @@ jobs:
       - name: Generate checksum
         shell: bash
         run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            certutil -hashfile ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} SHA256 | head -n 2 | tail -n 1 > checksum.txt
-            echo "  ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }}" >> checksum.txt
-          else
-            shasum -a 256 ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} > checksum.txt
-          fi
+          shasum -a 256 ock-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }} > checksum.txt
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -108,6 +104,7 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
