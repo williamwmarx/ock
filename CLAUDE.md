@@ -4,7 +4,13 @@ This file provides guidance to coding agents when working with code in this repo
 
 ## Project Overview
 
-`ock` is a command-line utility for working with table-like data, serving as a simpler and faster replacement for most awk use cases. It's written in Rust and uses a selector-based approach to extract specific rows and columns from structured text data.
+`ock` is a command-line utility for working with table-like data, serving as a simpler and faster replacement for most awk use cases. It's written in Rust using the 2021 edition and uses a selector-based approach to extract specific rows and columns from structured text data.
+
+### Dependencies
+- `clap` (4.5.4) - Command-line argument parsing with derive features
+- `regex` (1.7.0) - Regular expression support for selectors and delimiters
+- `once_cell` (1.21.3) - Lazy static initialization for regex caching
+- `lru` (0.16.0) - LRU cache for compiled regex patterns
 
 ## Development Commands
 
@@ -67,14 +73,15 @@ ps aux | cargo run -- -c pid -r 0:10  # Example: filter process list
   - Provides `regex_compare` and `split` helper functions
 
 ### Test Organization
-- Unit tests are embedded in each module using `#[cfg(test)]` modules
-  - `cli_tests.rs` - Tests for CLI parsing
-  - `main_tests.rs` - Tests for main logic functions
-  - `selector_tests.rs` - Tests for selector parsing and matching
-  - `utils_tests.rs` - Tests for utility functions
+- Unit tests are embedded in each module using `#[cfg(test)]` modules and separate test files:
+  - `cli_tests.rs` - Tests for CLI parsing and input detection
+  - `main_tests.rs` - Tests for main logic functions and output formatting
+  - `selector_tests.rs` - Tests for selector parsing and matching logic
+  - `utils_tests.rs` - Tests for utility functions (regex_compare, split)
 - Integration tests in `tests/integration_test.rs`
-  - End-to-end tests simulating actual CLI usage
-  - Tests for various data processing scenarios
+  - End-to-end tests simulating actual CLI usage with various inputs
+  - Tests for data processing scenarios with different delimiters and selectors
+- Dev dependencies include `tempfile` (3.8.0) for temporary file testing
 
 ## Key Implementation Details
 

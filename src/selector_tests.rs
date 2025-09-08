@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use regex::Regex;
+    use std::sync::Arc;
 
     #[test]
     fn test_selector_default() {
@@ -25,7 +25,7 @@ mod tests {
         assert_ne!(selector1, selector3);
 
         let mut selector4 = Selector::default();
-        selector4.start_regex = Regex::new(r"test").unwrap();
+        selector4.start_regex = get_or_compile_regex("test").unwrap();
         assert_ne!(selector1, selector4);
     }
 
@@ -178,12 +178,44 @@ mod tests {
         assert_eq!(selectors[0].start_idx, 0);
         assert_eq!(selectors[0].end_idx, i64::MAX);
 
-        // Test multiple commas
+        // Test multiple commas - empty selectors should select all
         let selectors = parse_selectors(&String::from("1,,3")).unwrap();
         assert_eq!(selectors.len(), 3);
         assert_eq!(selectors[0].start_idx, 1);
-        assert_eq!(selectors[1].start_idx, 0); // Empty selector gets default
+        assert_eq!(selectors[1].start_idx, 0); // Empty selector selects all
+        assert_eq!(selectors[1].end_idx, i64::MAX); // Empty selector selects all
         assert_eq!(selectors[2].start_idx, 3);
+    }
+
+    #[test]
+    fn test_parse_selectors_python_slice_semantics() {
+        // Test "1::" - from index 1 to end with default step
+        let selectors = parse_selectors(&String::from("1::")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 1);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 1);
+
+        // Test "::2" - every 2nd item from start to end
+        let selectors = parse_selectors(&String::from("::2")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 2);
+
+        // Test ":5:" - first 5 items (start=0, end=5, step=1)
+        let selectors = parse_selectors(&String::from(":5:")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, 5);
+        assert_eq!(selectors[0].step, 1);
+
+        // Test "::" - all items
+        let selectors = parse_selectors(&String::from("::")).unwrap();
+        assert_eq!(selectors.len(), 1);
+        assert_eq!(selectors[0].start_idx, 0);
+        assert_eq!(selectors[0].end_idx, i64::MAX);
+        assert_eq!(selectors[0].step, 1);
     }
 
     #[test]
@@ -241,5 +273,35 @@ mod tests {
         assert!(selectors[0].start_regex.is_match("username"));
         assert!(selectors[0].start_regex.is_match("superuser"));
         assert!(selectors[0].start_regex.is_match("multiuser"));
+    }
+
+    #[test]
+    fn test_get_or_compile_regex_caches_patterns() {
+        {
+            let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+            cache.clear();
+        }
+        let r1 = get_or_compile_regex("foo_cache_test").unwrap();
+        let r2 = get_or_compile_regex("foo_cache_test").unwrap();
+        assert!(Arc::ptr_eq(&r1, &r2));
+        let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(cache.contains("foo_cache_test"));
+    }
+
+    #[test]
+    fn test_get_or_compile_regex_thread_safe() {
+        {
+            let mut cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+            cache.clear();
+        }
+        let handles: Vec<_> = (0..10)
+            .map(|_| std::thread::spawn(|| get_or_compile_regex("thread_safe_test").unwrap()))
+            .collect();
+        let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+        for r in &results[1..] {
+            assert!(Arc::ptr_eq(&results[0], r));
+        }
+        let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(cache.contains("thread_safe_test"));
     }
 }

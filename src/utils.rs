@@ -30,11 +30,11 @@ mod utils {
                 .map(String::from)
                 .collect())
         } else {
-            // Split by regex
-            let regex = Regex::new(delimiter)
-                .map_err(|e| SelectorError::InvalidRegex { 
-                    pattern: delimiter.to_string(), 
-                    source: e 
+            // Split by regex using global cache
+            let regex = crate::selector::get_or_compile_regex(delimiter)
+                .map_err(|e| SelectorError::InvalidRegex {
+                    pattern: delimiter.to_string(),
+                    source: e
                 })?;
             Ok(regex
                 .split(text)
