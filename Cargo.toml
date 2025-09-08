@@ -3,6 +3,7 @@ name = "ock"
 version = "0.1.0"
 authors=["William W. Marx <oss@marx.sh>"]
 description="A simple, fast command line utility for working with table-like data"
+repository = "https://github.com/williamwmarx/ock"
 license = "MIT"
 edition = "2021"
 
@@ -21,3 +22,16 @@ lru = "0.16.0"
 
 [dev-dependencies]
 tempfile = "3.8.0"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/ock-v{ version }-{ target }.{ archive-format }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-apple-darwin]
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-apple-darwin]
+pkg-fmt = "tgz"
