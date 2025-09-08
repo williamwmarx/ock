@@ -136,10 +136,17 @@ ock -r 1:100:10 large_file.txt  # Every 10th row from 1-100
 
 ## CI/CD & PR Guidelines
 
+### Branch Protection
+- The `main` branch has branch protection enabled and cannot be pushed to directly
+- All changes must go through pull requests
+- Force pushes to `main` are disallowed
+- Create feature branches for all work and open PRs to merge into `main`
+
+### Pull Request Requirements
 - Commits: concise, imperative subject; reference issues (e.g., `Fix selector step off-by-one (#42)`)
 - Always use conventional commits (`feat:`, `fix:`, `docs:`)
 - PRs: describe problem, approach, and tradeoffs; link issues; include before/after examples when changing flags or output
-- Ensure `cargo fmt`, `cargo clippy`, build, and tests pass before review
+- Ensure `cargo fmt`, `cargo clippy`, build, and tests pass before review (CI will verify this)
 - Update `README.md` when altering flags, defaults, or examples
 
 ## Security Notes
