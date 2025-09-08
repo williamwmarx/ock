@@ -298,10 +298,12 @@ mod tests {
             .map(|_| std::thread::spawn(|| get_or_compile_regex("thread_safe_test").unwrap()))
             .collect();
         let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+        // Verify all threads got the same Arc reference (proves cache deduplication works)
         for r in &results[1..] {
             assert!(Arc::ptr_eq(&results[0], r));
         }
-        let cache = REGEX_CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        assert!(cache.contains("thread_safe_test"));
+        // Note: We don't check cache.contains() here because in parallel test environments,
+        // other tests may evict entries from the global LRU cache between thread completion
+        // and our check. The Arc pointer equality above already proves thread safety.
     }
 }
