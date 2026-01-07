@@ -70,7 +70,9 @@ pub fn item_in_sequence_with_state(
     } else if state.current_start_idx != usize::MAX
         && ((item_idx == temp_selector.resolved_end_idx
             && item_idx >= state.current_start_idx
-            && item_idx.saturating_sub(state.current_start_idx) % temp_selector.step == 0)
+            && item_idx
+                .saturating_sub(state.current_start_idx)
+                .is_multiple_of(temp_selector.step))
             || temp_selector.end_regex.is_match(item))
     {
         // Sequence end
@@ -78,7 +80,9 @@ pub fn item_in_sequence_with_state(
         state.current_end_idx = item_idx;
     } else if item_idx > state.current_start_idx
         && item_idx < state.current_end_idx
-        && item_idx.saturating_sub(state.current_start_idx) % temp_selector.step == 0
+        && item_idx
+            .saturating_sub(state.current_start_idx)
+            .is_multiple_of(temp_selector.step)
     {
         // Sequence middle
         in_sequence = true;
@@ -122,7 +126,9 @@ pub fn item_in_sequence(
     } else if selector.resolved_start_idx != usize::MAX
         && ((item_idx == selector.resolved_end_idx
             && item_idx >= selector.resolved_start_idx
-            && item_idx.saturating_sub(selector.resolved_start_idx) % selector.step == 0)
+            && item_idx
+                .saturating_sub(selector.resolved_start_idx)
+                .is_multiple_of(selector.step))
             || selector.end_regex.is_match(item))
     {
         // Sequence end
@@ -130,7 +136,9 @@ pub fn item_in_sequence(
         selector.resolved_end_idx = item_idx;
     } else if item_idx > selector.resolved_start_idx
         && item_idx < selector.resolved_end_idx
-        && item_idx.saturating_sub(selector.resolved_start_idx) % selector.step == 0
+        && item_idx
+            .saturating_sub(selector.resolved_start_idx)
+            .is_multiple_of(selector.step)
     {
         // Sequence middle
         in_sequence = true;
