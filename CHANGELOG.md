@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-13
+
+### Other
+
+- Bump actions/upload-artifact from 4 to 7 ([#64](https://github.com/williamwmarx/ock/pull/64))
+- Bump actions/checkout from 4 to 6 ([#63](https://github.com/williamwmarx/ock/pull/63))
+- Bump softprops/action-gh-release from 2 to 3 ([#62](https://github.com/williamwmarx/ock/pull/62))
+- Bump actions/download-artifact from 4 to 8 ([#61](https://github.com/williamwmarx/ock/pull/61))
+- Bump actions/cache from 4 to 5 ([#60](https://github.com/williamwmarx/ock/pull/60))
+- Bump tempfile from 3.21.0 to 3.27.0 ([#58](https://github.com/williamwmarx/ock/pull/58))
+- Bump regex from 1.11.2 to 1.12.3 ([#57](https://github.com/williamwmarx/ock/pull/57))
+- Bump once_cell from 1.21.3 to 1.21.4 ([#56](https://github.com/williamwmarx/ock/pull/56))
+- Bump clap from 4.5.47 to 4.6.0 ([#55](https://github.com/williamwmarx/ock/pull/55))
+- Add github-actions ecosystem
+- Add Dependabot configuration for Cargo updates
+
+
 ## [0.1.2] - 2026-01-07
 
 ### Fixed
