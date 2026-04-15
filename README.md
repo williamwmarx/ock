@@ -1,12 +1,11 @@
 # ock
 
+> **⚠️ Archived — no longer maintained.** This repository is archived and read-only. The last published version remains available on [crates.io](https://crates.io/crates/ock). Feel free to fork.
+
 [![Crates.io](https://img.shields.io/crates/v/ock.svg)](https://crates.io/crates/ock)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/williamwmarx/ock/actions/workflows/ci.yml/badge.svg)](https://github.com/williamwmarx/ock/actions/workflows/ci.yml)
 
 `ock` is a lightweight command-line tool for slicing tabular data. It covers many everyday awk tasks with a simpler, faster interface.
-
-The project started as an effort to learn Rust and forget awk. It became useful enough for me and I stopped maintaining it. Now, thanks to the fine folks at [Anthropic](https://www.anthropic.com/claude-code) and [OpenAI](https://openai.com/codex/) making the cost of code maintenance ~zero, the project is back under active development.
 
 ## Features
 - Select columns by index or header
